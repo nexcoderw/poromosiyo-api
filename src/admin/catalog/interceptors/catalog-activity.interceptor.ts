@@ -194,11 +194,13 @@ export class CatalogActivityInterceptor implements NestInterceptor {
 
 function resolveResourceId(
   source: ResourceIdSource,
-  params: Record<string, string>,
+  params: Record<string, string | string[]>,
   response: unknown,
 ): string | null {
   if (source !== 'response') {
-    return params[source] ?? null;
+    const candidate = params[source];
+
+    return typeof candidate === 'string' ? candidate : null;
   }
 
   if (
