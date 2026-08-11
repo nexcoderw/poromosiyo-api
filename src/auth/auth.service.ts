@@ -20,10 +20,6 @@ import type {
   SessionMetadata,
 } from './types/auth.types';
 import { isAuthRole, roleSatisfiesRequirement } from './auth-role.util';
-import {
-  isAuthRole,
-  roleSatisfiesRequirement,
-} from './auth-role.util';
 
 type UserForAuthentication = {
   id: string;
@@ -525,7 +521,7 @@ function normalizeFullName(fullName: string): string {
 }
 
 function toAuthRole(role: string): AuthRole {
-  if (role === 'CUSTOMER' || role === 'ADMIN') {
+  if (isAuthRole(role)) {
     return role;
   }
 
