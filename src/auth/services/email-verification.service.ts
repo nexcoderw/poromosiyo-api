@@ -52,7 +52,11 @@ export class EmailVerificationService {
       },
     });
 
-    if (!user || !roleSatisfiesRequirement(user.role, expectedRole) || !user.isActive) {
+    if (
+      !user ||
+      !roleSatisfiesRequirement(user.role, expectedRole) ||
+      !user.isActive
+    ) {
       throw new ForbiddenException(
         'Email verification is unavailable for this account.',
       );
@@ -159,7 +163,7 @@ export class EmailVerificationService {
       !token ||
       token.usedAt !== null ||
       token.expiresAt.getTime() <= now.getTime() ||
-      token.!roleSatisfiesRequirement(user.role, expectedRole) ||
+      !roleSatisfiesRequirement(token.user.role, expectedRole) ||
       !token.user.isActive ||
       token.email !== token.user.email
     ) {
