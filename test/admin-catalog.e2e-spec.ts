@@ -2,6 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { PrismaService } from '@poromosiyo/db';
 import request from 'supertest';
+import type { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PasswordHasherService } from '../src/auth/services/password-hasher.service';
@@ -9,7 +10,7 @@ import type { AuthenticationResult } from '../src/auth/types/auth.types';
 import { configureApplication } from '../src/bootstrap/configure-application';
 
 describe('Poromosiyo admin catalog (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
 
   let prisma: PrismaService;
 
@@ -48,7 +49,7 @@ describe('Poromosiyo admin catalog (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<INestApplication<App>>();
 
     configureApplication(app);
 
@@ -198,12 +199,13 @@ describe('Poromosiyo admin catalog (e2e)', () => {
     expect(body.discountPercentage).toBe('25.00');
   });
 
-  it('does not activate a product without an image', async () => {
+  it('does not publish a product without an image', async () => {
     await request(app.getHttpServer())
-      .patch(`/api/v1/admin/products/${productId}`)
+      .patch('/api/v1/admin/products/publication')
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
       .send({
-        status: 'ACTIVE',
+        productIds: [productId],
+        published: true,
       })
       .expect(409);
   });
@@ -223,13 +225,25 @@ describe('Poromosiyo admin catalog (e2e)', () => {
     expect(body.isPrimary).toBe(true);
   });
 
-  it('activates the complete discounted product', async () => {
-    const response = await request(app.getHttpServer())
-      .patch(`/api/v1/admin/products/${productId}`)
+  it('publishes the complete discounted product through the publication endpoint', async () => {
+    const publication = await request(app.getHttpServer())
+      .patch('/api/v1/admin/products/publication')
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
       .send({
-        status: 'ACTIVE',
+        productIds: [productId],
+        published: true,
       })
+      .expect(200);
+
+    const result = parseObject(publication.text);
+
+    expect(result.published).toBe(true);
+
+    expect(result.changedCount).toBe(1);
+
+    const response = await request(app.getHttpServer())
+      .get(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${adminAuth.accessToken}`)
       .expect(200);
 
     const body = parseObject(response.text);
