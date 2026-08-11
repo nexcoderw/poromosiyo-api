@@ -47,7 +47,10 @@
     "milestone:15:check": "npm --prefix ../db run milestone:14:check && npm run ci:check && npm run api:db-check && npm run test:e2e",
     "bootstrap:superadmin": "npm run seed:superadmin",
     "milestone:16:check": "npm --prefix ../db run milestone:14:check && npm run ci:check && npm run api:db-check && npm run test:e2e",
-    "seed:superadmin": "npm run db:build && ts-node src/scripts/seed-superadmin.ts"
+    "seed:superadmin": "npm run db:build && ts-node src/scripts/seed-superadmin.ts",
+    "admin:contract-check": "npm run db:build && ts-node src/scripts/check-admin-backend-contract.ts",
+    "admin:acceptance": "jest --config ./test/jest-e2e.json --runInBand admin-acceptance.e2e-spec.ts",
+    "milestone:17:check": "npm --prefix ../db run milestone:14:check && npm run admin:contract-check && npm run ci:check && npm run api:db-check && npm run test:e2e"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
