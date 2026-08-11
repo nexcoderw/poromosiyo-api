@@ -10,19 +10,24 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type { Request } from 'express';
 
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
 import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
 import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import { getSessionMetadata } from '../../../auth/request-metadata';
 import type { AuthPrincipal } from '../../../auth/types/auth.types';
+import { ProductPublicationDto } from '../dto/product-publication.dto';
 import {
   CreateProductDto,
   ListProductsDto,
   UpdateProductDto,
 } from '../dto/product.dto';
+import { AdminProductPublicationService } from '../services/admin-product-publication.service';
 import { AdminProductsService } from '../services/admin-products.service';
 
 @Controller({
@@ -32,7 +37,11 @@ import { AdminProductsService } from '../services/admin-products.service';
 @RequireAuthRoles('ADMIN')
 @UseGuards(JwtAuthGuard, AuthRoleGuard)
 export class AdminProductsController {
-  constructor(private readonly products: AdminProductsService) {}
+  constructor(
+    private readonly products: AdminProductsService,
+
+    private readonly publication: AdminProductPublicationService,
+  ) {}
 
   @Get()
   list(
@@ -40,6 +49,24 @@ export class AdminProductsController {
     query: ListProductsDto,
   ) {
     return this.products.list(query);
+  }
+
+  @Patch('publication')
+  setPublication(
+    @Body()
+    dto: ProductPublicationDto,
+
+    @CurrentUser()
+    admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
+  ) {
+    return this.publication.setPublication(
+      dto,
+      admin.id,
+      getSessionMetadata(request),
+    );
   }
 
   @Get(':id')
@@ -59,6 +86,7 @@ export class AdminProductsController {
   create(
     @Body()
     dto: CreateProductDto,
+
     @CurrentUser()
     admin: AuthPrincipal,
   ) {
@@ -74,8 +102,10 @@ export class AdminProductsController {
       }),
     )
     id: string,
+
     @Body()
     dto: UpdateProductDto,
+
     @CurrentUser()
     admin: AuthPrincipal,
   ) {
@@ -92,6 +122,7 @@ export class AdminProductsController {
       }),
     )
     id: string,
+
     @CurrentUser()
     admin: AuthPrincipal,
   ): Promise<void> {
