@@ -10,6 +10,7 @@ import { PrismaService } from '@poromosiyo/db';
 import type { AuthRole, SessionMetadata } from '../types/auth.types';
 import { AuthMailService } from './auth-mail.service';
 import { TokenHasherService } from './token-hasher.service';
+import { roleSatisfiesRequirement } from '../auth-role.util';
 
 @Injectable()
 export class EmailVerificationService {
@@ -51,7 +52,7 @@ export class EmailVerificationService {
       },
     });
 
-    if (!user || user.role !== expectedRole || !user.isActive) {
+    if (!user || !roleSatisfiesRequirement(user.role, expectedRole) || !user.isActive) {
       throw new ForbiddenException(
         'Email verification is unavailable for this account.',
       );
@@ -158,7 +159,7 @@ export class EmailVerificationService {
       !token ||
       token.usedAt !== null ||
       token.expiresAt.getTime() <= now.getTime() ||
-      token.user.role !== expectedRole ||
+      token.!roleSatisfiesRequirement(user.role, expectedRole) ||
       !token.user.isActive ||
       token.email !== token.user.email
     ) {
