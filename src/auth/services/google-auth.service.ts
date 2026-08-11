@@ -155,7 +155,11 @@ export class GoogleAuthService {
       },
     });
 
-    if (!user || !user.isActive || toAuthRole(user.role) !== expectedRole) {
+    if (
+      !user ||
+      !user.isActive ||
+      !roleSatisfiesRequirement(user.role, expectedRole)
+    ) {
       throw new UnauthorizedException('Authentication required.');
     }
 
@@ -298,7 +302,7 @@ export class GoogleAuthService {
     expectedRole: AuthRole,
     metadata: SessionMetadata,
   ): Promise<AuthenticationResult> {
-    if (!user.isActive || toAuthRole(user.role) !== expectedRole) {
+    if (!user.isActive || !roleSatisfiesRequirement(user.role, expectedRole)) {
       throwInvalidGoogleLogin();
     }
 
@@ -429,7 +433,7 @@ function normalizeEmail(email: string): string {
 }
 
 function toAuthRole(role: string): AuthRole {
-  if (role === 'CUSTOMER' || role === 'ADMIN') {
+  if (isAuthRole(role)) {
     return role;
   }
 
