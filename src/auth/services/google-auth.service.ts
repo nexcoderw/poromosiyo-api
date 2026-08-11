@@ -18,6 +18,7 @@ import type {
 import type { VerifiedGoogleIdentity } from '../types/google-auth.types';
 import { GoogleIdTokenVerifierService } from './google-id-token-verifier.service';
 import { TokenHasherService } from './token-hasher.service';
+import { isAuthRole, roleSatisfiesRequirement } from '../auth-role.util';
 
 type GoogleAuthUser = {
   id: string;
