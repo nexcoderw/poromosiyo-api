@@ -19,6 +19,7 @@ import type {
   AuthRole,
   SessionMetadata,
 } from './types/auth.types';
+import { isAuthRole, roleSatisfiesRequirement } from './auth-role.util';
 
 type UserForAuthentication = {
   id: string;
@@ -236,7 +237,7 @@ export class AuthService {
       throwInvalidCredentials();
     }
 
-    if (toAuthRole(user.role) !== expectedRole) {
+    if (!roleSatisfiesRequirement(user.role, expectedRole)) {
       throwInvalidCredentials();
     }
 
@@ -356,7 +357,7 @@ export class AuthService {
         session.revokedAt !== null ||
         session.expiresAt.getTime() <= now.getTime() ||
         !user.isActive ||
-        toAuthRole(user.role) !== expectedRole
+        !roleSatisfiesRequirement(user.role, expectedRole)
       ) {
         return {
           status: 'invalid',
