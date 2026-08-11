@@ -15,6 +15,7 @@ import type {
 import { AuthMailService } from './auth-mail.service';
 import { PasswordHasherService } from './password-hasher.service';
 import { TokenHasherService } from './token-hasher.service';
+import { roleSatisfiesRequirement } from '../auth-role.util';
 
 @Injectable()
 export class PasswordRecoveryService {
@@ -73,7 +74,7 @@ export class PasswordRecoveryService {
         },
       });
 
-      if (!user || user.role !== expectedRole || !user.isActive) {
+      if (!user || !roleSatisfiesRequirement(user.role, expectedRole) || !user.isActive) {
         return;
       }
 
@@ -175,7 +176,7 @@ export class PasswordRecoveryService {
       !token ||
       token.usedAt !== null ||
       token.expiresAt.getTime() <= now.getTime() ||
-      token.user.role !== expectedRole ||
+      token.!roleSatisfiesRequirement(user.role, expectedRole) ||
       !token.user.isActive
     ) {
       throwInvalidResetToken();
