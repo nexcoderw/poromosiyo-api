@@ -33,7 +33,7 @@ export class AuthRoleGuard
   canActivate(
     context: ExecutionContext,
   ): boolean {
-    const roles =
+    const requiredRoles =
       this.reflector
         .getAllAndOverride<
           AuthRole[]
@@ -46,8 +46,8 @@ export class AuthRoleGuard
         );
 
     if (
-      !roles ||
-      roles.length === 0
+      !requiredRoles ||
+      requiredRoles.length === 0
     ) {
       return true;
     }
@@ -63,7 +63,7 @@ export class AuthRoleGuard
       !request.auth ||
       !roleSatisfiesAnyRequirement(
         request.auth.role,
-        roles,
+        requiredRoles,
       )
     ) {
       throw new ForbiddenException(
