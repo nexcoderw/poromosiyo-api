@@ -154,21 +154,14 @@ const environmentSchema =
         .allow('')
         .default(''),
 
+    GOOGLE_AUTH_ENABLED:
+      Joi.boolean()
+        .default(false),
+
     GOOGLE_CLIENT_ID:
       Joi.string()
         .allow('')
-        .optional(),
-
-    GOOGLE_CLIENT_SECRET:
-      Joi.string()
-        .allow('')
-        .optional(),
-
-    GOOGLE_REDIRECT_URI:
-      Joi.string()
-        .uri()
-        .allow('')
-        .optional(),
+        .default(''),
   })
     .unknown(true);
 
@@ -188,16 +181,15 @@ export function validateEnvironment(
     );
 
   if (result.error) {
-    const message =
-      result.error.details
-        .map(
-          (detail) =>
-            detail.message,
-        )
-        .join('; ');
-
     throw new Error(
-      `Environment validation failed: ${message}`,
+      `Environment validation failed: ${
+        result.error.details
+          .map(
+            (detail) =>
+              detail.message,
+          )
+          .join('; ')
+      }`,
     );
   }
 
@@ -237,6 +229,20 @@ export function validateEnvironment(
   ) {
     throw new Error(
       'Environment validation failed: SMTP_HOST is required when MAIL_DELIVERY_MODE is smtp.',
+    );
+  }
+
+  if (
+    value.GOOGLE_AUTH_ENABLED ===
+      true &&
+    (
+      typeof value.GOOGLE_CLIENT_ID !==
+        'string' ||
+      !value.GOOGLE_CLIENT_ID.trim()
+    )
+  ) {
+    throw new Error(
+      'Environment validation failed: GOOGLE_CLIENT_ID is required when GOOGLE_AUTH_ENABLED is true.',
     );
   }
 
