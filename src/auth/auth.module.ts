@@ -68,6 +68,13 @@ import { TokenHasherService } from './services/token-hasher.service';
     AuthMailService,
     EmailVerificationService,
     PasswordRecoveryService,
+
+    {
+      provide:
+        APP_INTERCEPTOR,
+      useClass:
+        AuthActivityInterceptor,
+    },
   ],
 
   exports: [
