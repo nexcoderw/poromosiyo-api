@@ -11,10 +11,7 @@ export type GovernanceUserResponse = {
   fullName: string;
   email: string;
   image: string | null;
-  role:
-    | 'CUSTOMER'
-    | 'ADMIN'
-    | 'SUPERADMIN';
+  role: 'CUSTOMER' | 'ADMIN' | 'SUPERADMIN';
   isActive: boolean;
   blockedAt: Date | null;
   blockedReason: string | null;
@@ -26,9 +23,7 @@ export type GovernanceUserResponse = {
     id: string;
     fullName: string;
     email: string;
-    role:
-      | 'ADMIN'
-      | 'SUPERADMIN';
+    role: 'ADMIN' | 'SUPERADMIN';
   } | null;
 };
 
@@ -47,19 +42,13 @@ export type UserActivityResponse = {
     id: string;
     fullName: string;
     email: string;
-    role:
-      | 'CUSTOMER'
-      | 'ADMIN'
-      | 'SUPERADMIN';
+    role: 'CUSTOMER' | 'ADMIN' | 'SUPERADMIN';
   } | null;
 
   actorUser: {
     id: string;
     fullName: string;
     email: string;
-    role:
-      | 'CUSTOMER'
-      | 'ADMIN'
-      | 'SUPERADMIN';
+    role: 'CUSTOMER' | 'ADMIN' | 'SUPERADMIN';
   } | null;
 };
