@@ -1,0 +1,13 @@
+export const AUTH_PASSWORD_MIN_LENGTH = 12;
+export const AUTH_PASSWORD_MAX_LENGTH = 128;
+
+export const AUTH_LOGIN_RATE_LIMIT = 5;
+export const AUTH_LOGIN_RATE_WINDOW_MS = 60_000;
+
+export const AUTH_REGISTER_RATE_LIMIT = 5;
+export const AUTH_REGISTER_RATE_WINDOW_MS = 60_000;
+
+export const USER_FULL_NAME_MAX_LENGTH = 150;
+export const USER_EMAIL_MAX_LENGTH = 254;
+export const USER_AGENT_MAX_LENGTH = 255;
+export const IP_ADDRESS_MAX_LENGTH = 45;
