@@ -74,7 +74,11 @@ export class PasswordRecoveryService {
         },
       });
 
-      if (!user || !roleSatisfiesRequirement(user.role, expectedRole) || !user.isActive) {
+      if (
+        !user ||
+        !roleSatisfiesRequirement(user.role, expectedRole) ||
+        !user.isActive
+      ) {
         return;
       }
 
@@ -176,7 +180,7 @@ export class PasswordRecoveryService {
       !token ||
       token.usedAt !== null ||
       token.expiresAt.getTime() <= now.getTime() ||
-      token.!roleSatisfiesRequirement(user.role, expectedRole) ||
+      !roleSatisfiesRequirement(token.user.role, expectedRole) ||
       !token.user.isActive
     ) {
       throwInvalidResetToken();
