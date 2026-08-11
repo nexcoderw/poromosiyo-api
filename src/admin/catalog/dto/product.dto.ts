@@ -1,6 +1,4 @@
-import {
-  Transform,
-} from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
@@ -26,9 +24,7 @@ import {
   PRODUCT_STATUSES,
   type CatalogProductStatus,
 } from '../catalog.constants';
-import {
-  CatalogPaginationDto,
-} from './catalog-pagination.dto';
+import { CatalogPaginationDto } from './catalog-pagination.dto';
 
 export class CreateProductDto {
   @IsUUID('4')
@@ -88,10 +84,7 @@ export class UpdateProductDto {
   categoryId?: string;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsUUID('4')
   brandId?: string | null;
 
@@ -114,19 +107,13 @@ export class UpdateProductDto {
   sku?: string;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
   @MaxLength(PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH)
   shortDescription?: string | null;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
   @MaxLength(PRODUCT_DESCRIPTION_MAX_LENGTH)
   description?: string | null;
@@ -155,8 +142,7 @@ export class UpdateProductDto {
   status?: CatalogProductStatus;
 }
 
-export class ListProductsDto
-  extends CatalogPaginationDto {
+export class ListProductsDto extends CatalogPaginationDto {
   @IsOptional()
   @IsIn(PRODUCT_STATUSES)
   status?: CatalogProductStatus;
@@ -170,19 +156,12 @@ export class ListProductsDto
   brandId?: string;
 
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   isFeatured?: boolean;
 }
 
-function parseOptionalBoolean(
-  value: unknown,
-): unknown {
+function parseOptionalBoolean(value: unknown): unknown {
   if (value === 'true') {
     return true;
   }
