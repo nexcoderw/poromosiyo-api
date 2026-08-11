@@ -28,8 +28,17 @@ import {
   JwtAuthGuard,
 } from './guards/jwt-auth.guard';
 import {
+  AuthMailService,
+} from './services/auth-mail.service';
+import {
+  EmailVerificationService,
+} from './services/email-verification.service';
+import {
   PasswordHasherService,
 } from './services/password-hasher.service';
+import {
+  PasswordRecoveryService,
+} from './services/password-recovery.service';
 import {
   TokenHasherService,
 } from './services/token-hasher.service';
@@ -74,6 +83,9 @@ import {
     AuthRoleGuard,
     PasswordHasherService,
     TokenHasherService,
+    AuthMailService,
+    EmailVerificationService,
+    PasswordRecoveryService,
   ],
 
   exports: [
@@ -83,6 +95,9 @@ import {
     AuthRoleGuard,
     PasswordHasherService,
     TokenHasherService,
+    AuthMailService,
+    EmailVerificationService,
+    PasswordRecoveryService,
   ],
 })
 export class AuthModule {}
