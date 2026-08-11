@@ -38,7 +38,8 @@
     "ci:check": "npm run format:check && npm run lint && npm run typecheck && npm run test:ci && npm run build",
     "milestone:6:check": "npm run ci:check && npm run api:db-check",
     "phase:7:check": "npm run ci:check && npm run api:db-check && npm run test:e2e",
-    "phase:8:check": "npm run ci:check && npm run api:db-check && npm run test:e2e"
+    "phase:8:check": "npm run ci:check && npm run api:db-check && npm run test:e2e",
+    "milestone:9:check": "npm run ci:check && npm run api:db-check && npm run test:e2e"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
