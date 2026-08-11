@@ -11,21 +11,17 @@ type DatabaseProbe = {
 };
 
 async function main(): Promise<void> {
-  const application =
-    await NestFactory.createApplicationContext(
-      DatabaseModule,
-      {
-        logger: false,
-      },
-    );
+  const application = await NestFactory.createApplicationContext(
+    DatabaseModule,
+    {
+      logger: false,
+    },
+  );
 
   try {
-    const prisma =
-      application.get(PrismaService);
+    const prisma = application.get(PrismaService);
 
-    const rows = await prisma.$queryRaw<
-      DatabaseProbe[]
-    >`
+    const rows = await prisma.$queryRaw<DatabaseProbe[]>`
       SELECT
         DATABASE() AS databaseName,
         VERSION() AS databaseVersion
@@ -39,26 +35,18 @@ async function main(): Promise<void> {
       );
     }
 
-    console.log(
-      'Poromosiyo API database package integration successful.',
-    );
+    console.log('Poromosiyo API database package integration successful.');
 
-    console.log(
-      `Database: ${database.databaseName}`,
-    );
+    console.log(`Database: ${database.databaseName}`);
 
-    console.log(
-      `Database version: ${database.databaseVersion}`,
-    );
+    console.log(`Database version: ${database.databaseVersion}`);
   } finally {
     await application.close();
   }
 }
 
 main().catch((error: unknown) => {
-  console.error(
-    'Poromosiyo API database package integration failed.',
-  );
+  console.error('Poromosiyo API database package integration failed.');
 
   if (error instanceof Error) {
     console.error(error.message);
