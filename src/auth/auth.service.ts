@@ -20,6 +20,10 @@ import type {
   SessionMetadata,
 } from './types/auth.types';
 import { isAuthRole, roleSatisfiesRequirement } from './auth-role.util';
+import {
+  isAuthRole,
+  roleSatisfiesRequirement,
+} from './auth-role.util';
 
 type UserForAuthentication = {
   id: string;
