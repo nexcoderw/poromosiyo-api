@@ -11,69 +11,38 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  Request,
-} from 'express';
+import type { Request } from 'express';
 
-import {
-  CurrentUser,
-} from '../../../auth/decorators/current-user.decorator';
-import {
-  RequireAuthRoles,
-} from '../../../auth/decorators/require-auth-roles.decorator';
-import {
-  AuthRoleGuard,
-} from '../../../auth/guards/auth-role.guard';
-import {
-  JwtAuthGuard,
-} from '../../../auth/guards/jwt-auth.guard';
-import {
-  getSessionMetadata,
-} from '../../../auth/request-metadata';
-import type {
-  AuthPrincipal,
-} from '../../../auth/types/auth.types';
-import {
-  BlockAccountDto,
-} from '../dto/block-account.dto';
-import {
-  ListGovernedUsersDto,
-} from '../dto/list-governed-users.dto';
-import {
-  ListUserActivitiesDto,
-} from '../dto/list-user-activities.dto';
-import {
-  AdminCustomersService,
-} from '../services/admin-customers.service';
-import {
-  AdminUserActivitiesService,
-} from '../services/admin-user-activities.service';
+import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
+import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
+import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import { getSessionMetadata } from '../../../auth/request-metadata';
+import type { AuthPrincipal } from '../../../auth/types/auth.types';
+import { BlockAccountDto } from '../dto/block-account.dto';
+import { ListGovernedUsersDto } from '../dto/list-governed-users.dto';
+import { ListUserActivitiesDto } from '../dto/list-user-activities.dto';
+import { AdminCustomersService } from '../services/admin-customers.service';
+import { AdminUserActivitiesService } from '../services/admin-user-activities.service';
 
 @Controller({
   path: 'admin/customers',
   version: '1',
 })
 @RequireAuthRoles('ADMIN')
-@UseGuards(
-  JwtAuthGuard,
-  AuthRoleGuard,
-)
+@UseGuards(JwtAuthGuard, AuthRoleGuard)
 export class AdminCustomersController {
   constructor(
-    private readonly customers:
-      AdminCustomersService,
-    private readonly activities:
-      AdminUserActivitiesService,
+    private readonly customers: AdminCustomersService,
+    private readonly activities: AdminUserActivitiesService,
   ) {}
 
   @Get()
   list(
     @Query()
-    query:
-      ListGovernedUsersDto,
+    query: ListGovernedUsersDto,
   ) {
-    return this.customers
-      .list(query);
+    return this.customers.list(query);
   }
 
   @Get(':id/activities')
@@ -87,20 +56,13 @@ export class AdminCustomersController {
     id: string,
 
     @Query()
-    query:
-      ListUserActivitiesDto,
+    query: ListUserActivitiesDto,
   ) {
-    return this.activities
-      .listCustomerActivities(
-        id,
-        query,
-      );
+    return this.activities.listCustomerActivities(id, query);
   }
 
   @Patch(':id/block')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
   async block(
     @Param(
       'id',
@@ -119,21 +81,16 @@ export class AdminCustomersController {
     @Req()
     request: Request,
   ): Promise<void> {
-    await this.customers
-      .block(
-        id,
-        admin,
-        dto.reason,
-        getSessionMetadata(
-          request,
-        ),
-      );
+    await this.customers.block(
+      id,
+      admin,
+      dto.reason,
+      getSessionMetadata(request),
+    );
   }
 
   @Patch(':id/unblock')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
   async unblock(
     @Param(
       'id',
@@ -149,14 +106,7 @@ export class AdminCustomersController {
     @Req()
     request: Request,
   ): Promise<void> {
-    await this.customers
-      .unblock(
-        id,
-        admin,
-        getSessionMetadata(
-          request,
-        ),
-      );
+    await this.customers.unblock(id, admin, getSessionMetadata(request));
   }
 
   @Get(':id')
@@ -169,7 +119,6 @@ export class AdminCustomersController {
     )
     id: string,
   ) {
-    return this.customers
-      .get(id);
+    return this.customers.get(id);
   }
 }
