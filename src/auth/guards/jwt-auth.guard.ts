@@ -13,6 +13,7 @@ import type {
   AuthRole,
 } from '../types/auth.types';
 import type { AuthenticatedRequest } from '../types/authenticated-request.types';
+import { isAuthRole } from '../auth-role.util';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
