@@ -1,8 +1,4 @@
-import {
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsString, MaxLength, MinLength } from 'class-validator';
 
 import {
   AUTH_PASSWORD_MAX_LENGTH,

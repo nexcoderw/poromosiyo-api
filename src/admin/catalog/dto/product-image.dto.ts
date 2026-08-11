@@ -1,6 +1,4 @@
-import {
-  Type,
-} from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
@@ -19,10 +17,7 @@ import {
 
 export class CreateProductImageDto {
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(PRODUCT_IMAGE_URL_MAX_LENGTH)
@@ -47,20 +42,14 @@ export class CreateProductImageDto {
 export class UpdateProductImageDto {
   @IsOptional()
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(PRODUCT_IMAGE_URL_MAX_LENGTH)
   url?: string;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
   @MaxLength(PRODUCT_IMAGE_ALT_MAX_LENGTH)
   altText?: string | null;

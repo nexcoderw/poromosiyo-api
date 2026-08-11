@@ -1,12 +1,7 @@
-import type {
-  Request,
-} from 'express';
+import type { Request } from 'express';
 
-import type {
-  AuthPrincipal,
-} from './auth.types';
+import type { AuthPrincipal } from './auth.types';
 
-export type AuthenticatedRequest =
-  Request & {
-    auth: AuthPrincipal;
-  };
+export type AuthenticatedRequest = Request & {
+  auth: AuthPrincipal;
+};

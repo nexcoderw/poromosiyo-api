@@ -1,6 +1,4 @@
-import {
-  Transform,
-} from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsOptional,
@@ -18,9 +16,7 @@ import {
   CATALOG_SLUG_MAX_LENGTH,
   CATALOG_SLUG_PATTERN,
 } from '../catalog.constants';
-import {
-  CatalogPaginationDto,
-} from './catalog-pagination.dto';
+import { CatalogPaginationDto } from './catalog-pagination.dto';
 
 export class CreateBrandDto {
   @IsString()
@@ -41,10 +37,7 @@ export class CreateBrandDto {
 
   @IsOptional()
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(2048)
@@ -52,10 +45,7 @@ export class CreateBrandDto {
 
   @IsOptional()
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(2048)
@@ -80,39 +70,24 @@ export class UpdateBrandDto {
   slug?: string;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
   @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
   description?: string | null;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(2048)
   logo?: string | null;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(2048)
@@ -123,22 +98,14 @@ export class UpdateBrandDto {
   isActive?: boolean;
 }
 
-export class ListBrandsDto
-  extends CatalogPaginationDto {
+export class ListBrandsDto extends CatalogPaginationDto {
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   isActive?: boolean;
 }
 
-function parseOptionalBoolean(
-  value: unknown,
-): unknown {
+function parseOptionalBoolean(value: unknown): unknown {
   if (value === 'true') {
     return true;
   }

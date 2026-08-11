@@ -1,6 +1,4 @@
-export type AuthRole =
-  | 'CUSTOMER'
-  | 'ADMIN';
+export type AuthRole = 'CUSTOMER' | 'ADMIN';
 
 export type SessionMetadata = {
   ipAddress: string | null;
@@ -16,10 +14,9 @@ export type AuthenticatedUser = {
   emailVerified: boolean;
 };
 
-export type AuthPrincipal =
-  AuthenticatedUser & {
-    sessionId: string;
-  };
+export type AuthPrincipal = AuthenticatedUser & {
+  sessionId: string;
+};
 
 export type AuthJwtPayload = {
   sub: string;

@@ -1,7 +1,4 @@
-import {
-  Transform,
-  Type,
-} from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
@@ -22,9 +19,7 @@ import {
   CATALOG_SLUG_PATTERN,
   CATEGORY_NAME_MAX_LENGTH,
 } from '../catalog.constants';
-import {
-  CatalogPaginationDto,
-} from './catalog-pagination.dto';
+import { CatalogPaginationDto } from './catalog-pagination.dto';
 
 export class CreateCategoryDto {
   @IsString()
@@ -49,10 +44,7 @@ export class CreateCategoryDto {
 
   @IsOptional()
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(2048)
@@ -83,32 +75,20 @@ export class UpdateCategoryDto {
   slug?: string;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsUUID('4')
   parentId?: string | null;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
   @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
   description?: string | null;
 
   @IsOptional()
-  @ValidateIf(
-    (_object, value) =>
-      value !== null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsUrl({
-    protocols: [
-      'http',
-      'https',
-    ],
+    protocols: ['http', 'https'],
     require_protocol: true,
   })
   @MaxLength(2048)
@@ -125,15 +105,9 @@ export class UpdateCategoryDto {
   sortOrder?: number;
 }
 
-export class ListCategoriesDto
-  extends CatalogPaginationDto {
+export class ListCategoriesDto extends CatalogPaginationDto {
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   isActive?: boolean;
 
@@ -142,19 +116,12 @@ export class ListCategoriesDto
   parentId?: string;
 
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   rootOnly?: boolean;
 }
 
-function parseOptionalBoolean(
-  value: unknown,
-): unknown {
+function parseOptionalBoolean(value: unknown): unknown {
   if (value === 'true') {
     return true;
   }

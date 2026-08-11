@@ -17,23 +17,14 @@ export const PRODUCT_IMAGE_ALT_MAX_LENGTH = 255;
 
 export const CATALOG_DESCRIPTION_MAX_LENGTH = 10_000;
 
-export const CATALOG_SLUG_PATTERN =
-  /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const CATALOG_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export const PRODUCT_SKU_PATTERN =
-  /^[A-Za-z0-9._-]{2,64}$/;
+export const PRODUCT_SKU_PATTERN = /^[A-Za-z0-9._-]{2,64}$/;
 
-export const CURRENCY_PATTERN =
-  /^[A-Z]{3}$/;
+export const CURRENCY_PATTERN = /^[A-Z]{3}$/;
 
-export const MONEY_PATTERN =
-  /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
+export const MONEY_PATTERN = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
 
-export const PRODUCT_STATUSES = [
-  'DRAFT',
-  'ACTIVE',
-  'ARCHIVED',
-] as const;
+export const PRODUCT_STATUSES = ['DRAFT', 'ACTIVE', 'ARCHIVED'] as const;
 
-export type CatalogProductStatus =
-  (typeof PRODUCT_STATUSES)[number];
+export type CatalogProductStatus = (typeof PRODUCT_STATUSES)[number];

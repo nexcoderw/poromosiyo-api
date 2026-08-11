@@ -1,19 +1,13 @@
-export function isPrismaErrorCode(
-  error: unknown,
-  code: string,
-): boolean {
-  if (
-    typeof error !==
-      'object' ||
-    error === null ||
-    !('code' in error)
-  ) {
+export function isPrismaErrorCode(error: unknown, code: string): boolean {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
     return false;
   }
 
   return (
-    error as {
-      code?: unknown;
-    }
-  ).code === code;
+    (
+      error as {
+        code?: unknown;
+      }
+    ).code === code
+  );
 }

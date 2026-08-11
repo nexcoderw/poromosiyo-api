@@ -1,6 +1,4 @@
-import {
-  Type,
-} from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -21,16 +19,14 @@ export class CatalogPaginationDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page: number =
-    CATALOG_DEFAULT_PAGE;
+  page: number = CATALOG_DEFAULT_PAGE;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(CATALOG_MAX_LIMIT)
-  limit: number =
-    CATALOG_DEFAULT_LIMIT;
+  limit: number = CATALOG_DEFAULT_LIMIT;
 
   @IsOptional()
   @IsString()
