@@ -1,7 +1,4 @@
-import {
-  Transform,
-  Type,
-} from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
@@ -26,16 +23,14 @@ export class ListGovernedUsersDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page: number =
-    GOVERNANCE_DEFAULT_PAGE;
+  page: number = GOVERNANCE_DEFAULT_PAGE;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(GOVERNANCE_MAX_LIMIT)
-  limit: number =
-    GOVERNANCE_DEFAULT_LIMIT;
+  limit: number = GOVERNANCE_DEFAULT_LIMIT;
 
   @IsOptional()
   @IsString()
@@ -43,26 +38,16 @@ export class ListGovernedUsersDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(
-    GOVERNANCE_ACCOUNT_STATUSES,
-  )
-  status?:
-    GovernanceAccountStatus;
+  @IsIn(GOVERNANCE_ACCOUNT_STATUSES)
+  status?: GovernanceAccountStatus;
 
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   emailVerified?: boolean;
 }
 
-function parseOptionalBoolean(
-  value: unknown,
-): unknown {
+function parseOptionalBoolean(value: unknown): unknown {
   if (value === 'true') {
     return true;
   }
