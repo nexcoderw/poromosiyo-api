@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 
 import { DatabaseModule } from '../database/database.module';
@@ -12,6 +13,7 @@ import { AuthService } from './auth.service';
 import { GoogleAuthController } from './google-auth.controller';
 import { AuthRoleGuard } from './guards/auth-role.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { AuthActivityInterceptor } from './interceptors/auth-activity.interceptor';
 import { AuthMailService } from './services/auth-mail.service';
 import { AuthMethodManagementService } from './services/auth-method-management.service';
 import { EmailVerificationService } from './services/email-verification.service';
@@ -70,10 +72,8 @@ import { TokenHasherService } from './services/token-hasher.service';
     PasswordRecoveryService,
 
     {
-      provide:
-        APP_INTERCEPTOR,
-      useClass:
-        AuthActivityInterceptor,
+      provide: APP_INTERCEPTOR,
+      useClass: AuthActivityInterceptor,
     },
   ],
 
