@@ -1,26 +1,11 @@
-import type {
-  AuthRole,
-} from './types/auth.types';
+import type { AuthRole } from './types/auth.types';
 
-export function isAuthRole(
-  role: unknown,
-): role is AuthRole {
-  return (
-    role === 'CUSTOMER' ||
-    role === 'ADMIN' ||
-    role === 'SUPERADMIN'
-  );
+export function isAuthRole(role: unknown): role is AuthRole {
+  return role === 'CUSTOMER' || role === 'ADMIN' || role === 'SUPERADMIN';
 }
 
-export function isAdminAuthRole(
-  role: unknown,
-): role is
-  | 'ADMIN'
-  | 'SUPERADMIN' {
-  return (
-    role === 'ADMIN' ||
-    role === 'SUPERADMIN'
-  );
+export function isAdminAuthRole(role: unknown): role is 'ADMIN' | 'SUPERADMIN' {
+  return role === 'ADMIN' || role === 'SUPERADMIN';
 }
 
 export function roleSatisfiesRequirement(
@@ -31,31 +16,18 @@ export function roleSatisfiesRequirement(
     return false;
   }
 
-  if (
-    requiredRole ===
-    'ADMIN'
-  ) {
-    return isAdminAuthRole(
-      actualRole,
-    );
+  if (requiredRole === 'ADMIN') {
+    return isAdminAuthRole(actualRole);
   }
 
-  return (
-    actualRole ===
-    requiredRole
-  );
+  return actualRole === requiredRole;
 }
 
 export function roleSatisfiesAnyRequirement(
   actualRole: unknown,
-  requiredRoles:
-    readonly AuthRole[],
+  requiredRoles: readonly AuthRole[],
 ): boolean {
-  return requiredRoles.some(
-    (requiredRole) =>
-      roleSatisfiesRequirement(
-        actualRole,
-        requiredRole,
-      ),
+  return requiredRoles.some((requiredRole) =>
+    roleSatisfiesRequirement(actualRole, requiredRole),
   );
 }
