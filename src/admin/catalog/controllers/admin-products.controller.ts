@@ -13,52 +13,33 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
-import {
-  CurrentUser,
-} from '../../../auth/decorators/current-user.decorator';
-import {
-  RequireAuthRoles,
-} from '../../../auth/decorators/require-auth-roles.decorator';
-import {
-  AuthRoleGuard,
-} from '../../../auth/guards/auth-role.guard';
-import {
-  JwtAuthGuard,
-} from '../../../auth/guards/jwt-auth.guard';
-import type {
-  AuthPrincipal,
-} from '../../../auth/types/auth.types';
+import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
+import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
+import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import type { AuthPrincipal } from '../../../auth/types/auth.types';
 import {
   CreateProductDto,
   ListProductsDto,
   UpdateProductDto,
 } from '../dto/product.dto';
-import {
-  AdminProductsService,
-} from '../services/admin-products.service';
+import { AdminProductsService } from '../services/admin-products.service';
 
 @Controller({
   path: 'admin/products',
   version: '1',
 })
 @RequireAuthRoles('ADMIN')
-@UseGuards(
-  JwtAuthGuard,
-  AuthRoleGuard,
-)
+@UseGuards(JwtAuthGuard, AuthRoleGuard)
 export class AdminProductsController {
-  constructor(
-    private readonly products:
-      AdminProductsService,
-  ) {}
+  constructor(private readonly products: AdminProductsService) {}
 
   @Get()
   list(
     @Query()
     query: ListProductsDto,
   ) {
-    return this.products
-      .list(query);
+    return this.products.list(query);
   }
 
   @Get(':id')
@@ -71,8 +52,7 @@ export class AdminProductsController {
     )
     id: string,
   ) {
-    return this.products
-      .get(id);
+    return this.products.get(id);
   }
 
   @Post()
@@ -82,11 +62,7 @@ export class AdminProductsController {
     @CurrentUser()
     admin: AuthPrincipal,
   ) {
-    return this.products
-      .create(
-        dto,
-        admin.id,
-      );
+    return this.products.create(dto, admin.id);
   }
 
   @Patch(':id')
@@ -103,18 +79,11 @@ export class AdminProductsController {
     @CurrentUser()
     admin: AuthPrincipal,
   ) {
-    return this.products
-      .update(
-        id,
-        dto,
-        admin.id,
-      );
+    return this.products.update(id, dto, admin.id);
   }
 
   @Delete(':id')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param(
       'id',
@@ -126,10 +95,6 @@ export class AdminProductsController {
     @CurrentUser()
     admin: AuthPrincipal,
   ): Promise<void> {
-    await this.products
-      .remove(
-        id,
-        admin.id,
-      );
+    await this.products.remove(id, admin.id);
   }
 }
