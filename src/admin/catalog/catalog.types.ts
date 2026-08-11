@@ -19,10 +19,7 @@ export type AdminProductResponse = {
   originalPrice: string;
   sellingPrice: string;
   discountPercentage: string;
-  status:
-    | 'DRAFT'
-    | 'ACTIVE'
-    | 'ARCHIVED';
+  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   isFeatured: boolean;
   publishedAt: Date | null;
   createdAt: Date;
@@ -47,4 +44,11 @@ export type AdminProductResponse = {
     isPrimary: boolean;
     createdAt: Date;
   }>;
+};
+
+export type ProductPublicationResult = {
+  published: boolean;
+  productIds: string[];
+  selectedCount: number;
+  changedCount: number;
 };
