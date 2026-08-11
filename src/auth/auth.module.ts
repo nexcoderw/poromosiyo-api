@@ -16,11 +16,17 @@ import {
   AdminAuthController,
 } from './admin-auth.controller';
 import {
+  AdminGoogleAuthController,
+} from './admin-google-auth.controller';
+import {
   AuthController,
 } from './auth.controller';
 import {
   AuthService,
 } from './auth.service';
+import {
+  GoogleAuthController,
+} from './google-auth.controller';
 import {
   AuthRoleGuard,
 } from './guards/auth-role.guard';
@@ -33,6 +39,12 @@ import {
 import {
   EmailVerificationService,
 } from './services/email-verification.service';
+import {
+  GoogleAuthService,
+} from './services/google-auth.service';
+import {
+  GoogleIdTokenVerifierService,
+} from './services/google-id-token-verifier.service';
 import {
   PasswordHasherService,
 } from './services/password-hasher.service';
@@ -61,7 +73,6 @@ import {
           config.getOrThrow<string>(
             'AUTH_ACCESS_TOKEN_SECRET',
           ),
-
         signOptions: {
           expiresIn:
             config.getOrThrow<number>(
@@ -74,11 +85,15 @@ import {
 
   controllers: [
     AuthController,
+    GoogleAuthController,
     AdminAuthController,
+    AdminGoogleAuthController,
   ],
 
   providers: [
     AuthService,
+    GoogleAuthService,
+    GoogleIdTokenVerifierService,
     JwtAuthGuard,
     AuthRoleGuard,
     PasswordHasherService,
@@ -91,13 +106,11 @@ import {
   exports: [
     JwtModule,
     AuthService,
+    GoogleAuthService,
     JwtAuthGuard,
     AuthRoleGuard,
     PasswordHasherService,
     TokenHasherService,
-    AuthMailService,
-    EmailVerificationService,
-    PasswordRecoveryService,
   ],
 })
 export class AuthModule {}
