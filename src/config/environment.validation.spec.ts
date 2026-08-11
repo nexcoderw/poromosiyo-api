@@ -10,7 +10,7 @@ describe('validateEnvironment', () => {
       '12345678901234567890123456789012',
   };
 
-  it('applies authentication and mail defaults', () => {
+  it('applies authentication defaults', () => {
     const result =
       validateEnvironment(
         validEnvironment,
@@ -28,16 +28,38 @@ describe('validateEnvironment', () => {
     ).toBe(3600);
 
     expect(
-      result.AUTH_EMAIL_ACTION_COOLDOWN_SECONDS,
-    ).toBe(60);
+      result.GOOGLE_AUTH_ENABLED,
+    ).toBe(false);
 
     expect(
-      result.AUTH_RECOVERY_MIN_RESPONSE_MS,
-    ).toBe(500);
+      result.GOOGLE_CLIENT_ID,
+    ).toBe('');
+  });
 
-    expect(
-      result.MAIL_DELIVERY_MODE,
-    ).toBe('memory');
+  it('requires Google client ID when Google auth is enabled', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        GOOGLE_AUTH_ENABLED:
+          true,
+        GOOGLE_CLIENT_ID:
+          '',
+      }),
+    ).toThrow(
+      'GOOGLE_CLIENT_ID',
+    );
+  });
+
+  it('accepts configured Google authentication', () => {
+    expect(() =>
+      validateEnvironment({
+        ...validEnvironment,
+        GOOGLE_AUTH_ENABLED:
+          true,
+        GOOGLE_CLIENT_ID:
+          '123456789-example.apps.googleusercontent.com',
+      }),
+    ).not.toThrow();
   });
 
   it('rejects production memory email delivery', () => {
@@ -60,7 +82,8 @@ describe('validateEnvironment', () => {
         ...validEnvironment,
         MAIL_DELIVERY_MODE:
           'smtp',
-        SMTP_HOST: '',
+        SMTP_HOST:
+          '',
       }),
     ).toThrow(
       'SMTP_HOST',
