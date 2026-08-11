@@ -288,34 +288,11 @@ export class AdminProductsService {
 
     assertDiscountedPrice(originalPrice, sellingPrice);
 
-    const targetStatus =
-      dto.status ?? (existing.status as CatalogProductStatus);
-
-    const effectiveDescription =
-      dto.description === undefined
-        ? existing.description
-        : normalizeNullableText(dto.description);
-
-    if (targetStatus === 'ACTIVE') {
-      await this.assertCanActivate(
-        id,
-        categoryId,
-        brandId,
-        effectiveDescription,
-      );
-    }
-
     let slug: string | undefined;
 
     if (dto.slug !== undefined) {
       slug = await this.resolveUniqueSlug(dto.slug, id);
     }
-
-    const publishedAt = determinePublishedAt(
-      existing.status as CatalogProductStatus,
-      targetStatus,
-      existing.publishedAt,
-    );
 
     try {
       const product = await this.prisma.product.update({
@@ -342,8 +319,6 @@ export class AdminProductsService {
           sellingPrice:
             dto.sellingPrice === undefined ? undefined : sellingPrice,
           isFeatured: dto.isFeatured,
-          status: dto.status,
-          publishedAt,
         },
         include: {
           category: {
@@ -657,24 +632,4 @@ function normalizeNullableText(
   const trimmed = value.trim();
 
   return trimmed || null;
-}
-
-function determinePublishedAt(
-  currentStatus: CatalogProductStatus,
-  targetStatus: CatalogProductStatus,
-  currentPublishedAt: Date | null,
-): Date | null {
-  if (targetStatus === 'ACTIVE') {
-    if (currentStatus !== 'ACTIVE') {
-      return new Date();
-    }
-
-    return currentPublishedAt ?? new Date();
-  }
-
-  if (targetStatus === 'DRAFT') {
-    return null;
-  }
-
-  return currentPublishedAt;
 }
