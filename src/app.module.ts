@@ -9,9 +9,11 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
 import { AdminCatalogModule } from './admin/catalog/admin-catalog.module';
+import { AdminGovernanceModule } from './admin/governance/admin-governance.module';
 
 @Module({
   imports: [
+    AdminGovernanceModule,
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
