@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { validateEnvironment } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
+import { AdminCatalogModule } from './admin/catalog/admin-catalog.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { DatabaseModule } from './database/database.module';
 
     DatabaseModule,
     AuthModule,
+    AdminCatalogModule,
   ],
 
   controllers: [AppController],
