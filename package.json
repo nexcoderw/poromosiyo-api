@@ -40,7 +40,9 @@
     "phase:7:check": "npm run ci:check && npm run api:db-check && npm run test:e2e",
     "phase:8:check": "npm run ci:check && npm run api:db-check && npm run test:e2e",
     "milestone:9:check": "npm run ci:check && npm run api:db-check && npm run test:e2e",
-    "milestone:10:check": "npm run ci:check && npm run api:db-check && npm run test:e2e"
+    "milestone:10:check": "npm run ci:check && npm run api:db-check && npm run test:e2e",
+    "auth:audit": "npm --prefix ../db run milestone:10:check && npm run ci:check && npm run api:db-check && npm run test:e2e",
+    "milestone:11:check": "npm run auth:audit"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
