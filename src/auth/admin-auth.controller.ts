@@ -16,10 +16,16 @@ import type {
 } from 'express';
 
 import {
+  AUTH_EMAIL_ACTION_RATE_LIMIT,
+  AUTH_EMAIL_ACTION_RATE_WINDOW_MS,
   AUTH_LOGIN_RATE_LIMIT,
   AUTH_LOGIN_RATE_WINDOW_MS,
+  AUTH_PASSWORD_RECOVERY_RATE_LIMIT,
+  AUTH_PASSWORD_RECOVERY_RATE_WINDOW_MS,
   AUTH_REFRESH_RATE_LIMIT,
   AUTH_REFRESH_RATE_WINDOW_MS,
+  EMAIL_VERIFICATION_REQUEST_MESSAGE,
+  PASSWORD_RESET_REQUEST_MESSAGE,
 } from './auth.constants';
 import {
   AuthService,
@@ -31,11 +37,23 @@ import {
   RequireAuthRoles,
 } from './decorators/require-auth-roles.decorator';
 import {
+  ChangePasswordDto,
+} from './dto/change-password.dto';
+import {
+  ConfirmEmailVerificationDto,
+} from './dto/confirm-email-verification.dto';
+import {
+  ForgotPasswordDto,
+} from './dto/forgot-password.dto';
+import {
   LoginDto,
 } from './dto/login.dto';
 import {
   RefreshTokenDto,
 } from './dto/refresh-token.dto';
+import {
+  ResetPasswordDto,
+} from './dto/reset-password.dto';
 import {
   AuthRoleGuard,
 } from './guards/auth-role.guard';
@@ -45,11 +63,21 @@ import {
 import {
   getSessionMetadata,
 } from './request-metadata';
+import {
+  EmailVerificationService,
+} from './services/email-verification.service';
+import {
+  PasswordRecoveryService,
+} from './services/password-recovery.service';
 import type {
   AuthenticatedUser,
   AuthenticationResult,
   AuthPrincipal,
 } from './types/auth.types';
+
+type MessageResponse = {
+  message: string;
+};
 
 @Controller({
   path: 'admin',
@@ -59,12 +87,14 @@ export class AdminAuthController {
   constructor(
     private readonly authService:
       AuthService,
+    private readonly emailVerification:
+      EmailVerificationService,
+    private readonly passwordRecovery:
+      PasswordRecoveryService,
   ) {}
 
   @Post('login')
-  @HttpCode(
-    HttpStatus.OK,
-  )
+  @HttpCode(HttpStatus.OK)
   @Throttle({
     default: {
       limit:
@@ -89,9 +119,7 @@ export class AdminAuthController {
   }
 
   @Post('refresh')
-  @HttpCode(
-    HttpStatus.OK,
-  )
+  @HttpCode(HttpStatus.OK)
   @Throttle({
     default: {
       limit:
@@ -110,10 +138,158 @@ export class AdminAuthController {
       );
   }
 
-  @Post('logout')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
+  @Post(
+    'email-verification/resend',
   )
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({
+    default: {
+      limit:
+        AUTH_EMAIL_ACTION_RATE_LIMIT,
+      ttl:
+        AUTH_EMAIL_ACTION_RATE_WINDOW_MS,
+    },
+  })
+  @RequireAuthRoles(
+    'ADMIN',
+  )
+  @UseGuards(
+    JwtAuthGuard,
+    AuthRoleGuard,
+  )
+  async resendEmailVerification(
+    @CurrentUser()
+    user: AuthPrincipal,
+    @Req()
+    request: Request,
+  ): Promise<MessageResponse> {
+    await this.emailVerification
+      .request(
+        user.id,
+        'ADMIN',
+        getSessionMetadata(
+          request,
+        ),
+      );
+
+    return {
+      message:
+        EMAIL_VERIFICATION_REQUEST_MESSAGE,
+    };
+  }
+
+  @Post(
+    'email-verification/confirm',
+  )
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({
+    default: {
+      limit:
+        AUTH_EMAIL_ACTION_RATE_LIMIT,
+      ttl:
+        AUTH_EMAIL_ACTION_RATE_WINDOW_MS,
+    },
+  })
+  async confirmEmailVerification(
+    @Body()
+    dto:
+      ConfirmEmailVerificationDto,
+  ): Promise<void> {
+    await this.emailVerification
+      .confirm(
+        dto.token,
+        'ADMIN',
+      );
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle({
+    default: {
+      limit:
+        AUTH_PASSWORD_RECOVERY_RATE_LIMIT,
+      ttl:
+        AUTH_PASSWORD_RECOVERY_RATE_WINDOW_MS,
+    },
+  })
+  async forgotPassword(
+    @Body()
+    dto: ForgotPasswordDto,
+    @Req()
+    request: Request,
+  ): Promise<MessageResponse> {
+    await this.passwordRecovery
+      .requestReset(
+        dto.email,
+        'ADMIN',
+        getSessionMetadata(
+          request,
+        ),
+      );
+
+    return {
+      message:
+        PASSWORD_RESET_REQUEST_MESSAGE,
+    };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({
+    default: {
+      limit:
+        AUTH_PASSWORD_RECOVERY_RATE_LIMIT,
+      ttl:
+        AUTH_PASSWORD_RECOVERY_RATE_WINDOW_MS,
+    },
+  })
+  async resetPassword(
+    @Body()
+    dto: ResetPasswordDto,
+  ): Promise<void> {
+    await this.passwordRecovery
+      .resetPassword(
+        dto.token,
+        dto.newPassword,
+        dto.confirmPassword,
+        'ADMIN',
+      );
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({
+    default: {
+      limit:
+        AUTH_PASSWORD_RECOVERY_RATE_LIMIT,
+      ttl:
+        AUTH_PASSWORD_RECOVERY_RATE_WINDOW_MS,
+    },
+  })
+  @RequireAuthRoles(
+    'ADMIN',
+  )
+  @UseGuards(
+    JwtAuthGuard,
+    AuthRoleGuard,
+  )
+  async changePassword(
+    @CurrentUser()
+    user: AuthPrincipal,
+    @Body()
+    dto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.passwordRecovery
+      .changePassword(
+        user,
+        dto.currentPassword,
+        dto.newPassword,
+        dto.confirmPassword,
+      );
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @RequireAuthRoles(
     'ADMIN',
   )
@@ -149,16 +325,11 @@ function toPublicUser(
   user: AuthPrincipal,
 ): AuthenticatedUser {
   return {
-    id:
-      user.id,
-    fullName:
-      user.fullName,
-    email:
-      user.email,
-    image:
-      user.image,
-    role:
-      user.role,
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    image: user.image,
+    role: user.role,
     emailVerified:
       user.emailVerified,
   };
