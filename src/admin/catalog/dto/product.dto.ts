@@ -136,10 +136,6 @@ export class UpdateProductDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
-
-  @IsOptional()
-  @IsIn(PRODUCT_STATUSES)
-  status?: CatalogProductStatus;
 }
 
 export class ListProductsDto extends CatalogPaginationDto {
