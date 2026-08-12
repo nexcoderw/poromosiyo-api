@@ -53,7 +53,6 @@ export type UserActivityResponse = {
   } | null;
 };
 
-
 export type ManagedAuthSessionResponse = {
   id: string;
   userAgent: string | null;
