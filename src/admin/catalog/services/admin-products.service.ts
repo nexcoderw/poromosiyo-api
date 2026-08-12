@@ -27,6 +27,11 @@ import {
 } from '../utils/catalog-money.util';
 import { isPrismaErrorCode } from '../utils/catalog-prisma-error.util';
 import { normalizeCatalogSlug } from '../utils/catalog-slug.util';
+import {
+  getExpiringSoonBoundary,
+  isProductExpired,
+  parseFutureProductExpiration,
+} from '../utils/product-expiration.util';
 
 @Injectable()
 export class AdminProductsService {
@@ -45,6 +50,10 @@ export class AdminProductsService {
     const limit = query.limit;
 
     const search = query.search?.trim();
+
+    const now = new Date();
+
+    const expiringSoon = getExpiringSoonBoundary(now);
 
     const where = {
       ...(search
@@ -74,6 +83,27 @@ export class AdminProductsService {
             status: query.status,
           }
         : {}),
+
+      ...(query.expirationStatus === 'VALID'
+        ? {
+            expiresAt: {
+              gt: now,
+            },
+          }
+        : query.expirationStatus === 'EXPIRED'
+          ? {
+              expiresAt: {
+                lte: now,
+              },
+            }
+          : query.expirationStatus === 'EXPIRING_SOON'
+            ? {
+                expiresAt: {
+                  gt: now,
+                  lte: expiringSoon,
+                },
+              }
+            : {}),
 
       ...(query.categoryId
         ? {
@@ -237,6 +267,8 @@ export class AdminProductsService {
 
     const sku = normalizeSku(dto.sku);
 
+    const expiresAt = parseFutureProductExpiration(dto.expiresAt);
+
     try {
       const product = await this.prisma.$transaction(async (transaction) => {
         const created = await transaction.product.create({
@@ -265,6 +297,8 @@ export class AdminProductsService {
             status: 'DRAFT',
 
             isFeatured: dto.isFeatured ?? false,
+
+            expiresAt,
           },
 
           include: {
@@ -353,6 +387,17 @@ export class AdminProductsService {
       throw new NotFoundException('Product not found.');
     }
 
+    const effectiveExpiresAt =
+      dto.expiresAt === undefined
+        ? existing.expiresAt
+        : parseFutureProductExpiration(dto.expiresAt);
+
+    if (!effectiveExpiresAt) {
+      throw new ConflictException(
+        'Assign an expiration date to this product before updating it.',
+      );
+    }
+
     const storeId = dto.storeId ?? existing.storeId;
 
     if (!storeId) {
@@ -400,6 +445,7 @@ export class AdminProductsService {
         categoryId,
         brandId,
         effectiveDescription,
+        effectiveExpiresAt,
       );
     }
 
@@ -449,6 +495,9 @@ export class AdminProductsService {
               dto.sellingPrice === undefined ? undefined : sellingPrice,
 
             isFeatured: dto.isFeatured,
+
+            expiresAt:
+              dto.expiresAt === undefined ? undefined : effectiveExpiresAt,
           },
 
           include: {
@@ -645,7 +694,14 @@ export class AdminProductsService {
     categoryId: string,
     brandId: string | null,
     description: string | null,
+    expiresAt: Date,
   ): Promise<void> {
+    if (!expiresAt || expiresAt.getTime() <= Date.now()) {
+      throw new ConflictException(
+        'Product expiration must be in the future before activation.',
+      );
+    }
+
     if (!description) {
       throw new ConflictException(
         'Product description is required before activation.',
@@ -771,6 +827,7 @@ function serializeProduct(product: {
   status: string;
   isFeatured: boolean;
   publishedAt: Date | null;
+  expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
   store: {
@@ -832,6 +889,8 @@ function serializeProduct(product: {
     category: product.category,
     brand: product.brand,
     images: product.images,
+    expiresAt: product.expiresAt,
+    isExpired: isProductExpired(product.expiresAt),
   };
 }
 
