@@ -4,6 +4,7 @@ export const CATALOG_MAX_LIMIT = 100;
 
 export const CATEGORY_NAME_MAX_LENGTH = 120;
 export const BRAND_NAME_MAX_LENGTH = 120;
+export const STORE_NAME_MAX_LENGTH = 160;
 export const PRODUCT_NAME_MAX_LENGTH = 255;
 
 export const CATALOG_SLUG_MAX_LENGTH = 191;
