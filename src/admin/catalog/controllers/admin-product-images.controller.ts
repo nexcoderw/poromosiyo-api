@@ -11,50 +11,28 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  Request,
-} from 'express';
+import type { Request } from 'express';
 
-import {
-  CurrentUser,
-} from '../../../auth/decorators/current-user.decorator';
-import {
-  RequireAuthRoles,
-} from '../../../auth/decorators/require-auth-roles.decorator';
-import {
-  AuthRoleGuard,
-} from '../../../auth/guards/auth-role.guard';
-import {
-  JwtAuthGuard,
-} from '../../../auth/guards/jwt-auth.guard';
-import {
-  getSessionMetadata,
-} from '../../../auth/request-metadata';
-import type {
-  AuthPrincipal,
-} from '../../../auth/types/auth.types';
+import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
+import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
+import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import { getSessionMetadata } from '../../../auth/request-metadata';
+import type { AuthPrincipal } from '../../../auth/types/auth.types';
 import {
   CreateProductImageDto,
   UpdateProductImageDto,
 } from '../dto/product-image.dto';
-import {
-  AdminProductImagesService,
-} from '../services/admin-product-images.service';
+import { AdminProductImagesService } from '../services/admin-product-images.service';
 
 @Controller({
   path: 'admin/products/:productId/images',
   version: '1',
 })
 @RequireAuthRoles('ADMIN')
-@UseGuards(
-  JwtAuthGuard,
-  AuthRoleGuard,
-)
+@UseGuards(JwtAuthGuard, AuthRoleGuard)
 export class AdminProductImagesController {
-  constructor(
-    private readonly images:
-      AdminProductImagesService,
-  ) {}
+  constructor(private readonly images: AdminProductImagesService) {}
 
   @Post()
   create(
@@ -79,9 +57,7 @@ export class AdminProductImagesController {
       productId,
       dto,
       admin.id,
-      getSessionMetadata(
-        request,
-      ),
+      getSessionMetadata(request),
     );
   }
 
@@ -117,16 +93,12 @@ export class AdminProductImagesController {
       imageId,
       dto,
       admin.id,
-      getSessionMetadata(
-        request,
-      ),
+      getSessionMetadata(request),
     );
   }
 
   @Delete(':imageId')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
   async remove(
     @Param(
       'productId',
@@ -154,9 +126,7 @@ export class AdminProductImagesController {
       productId,
       imageId,
       admin.id,
-      getSessionMetadata(
-        request,
-      ),
+      getSessionMetadata(request),
     );
   }
 }
