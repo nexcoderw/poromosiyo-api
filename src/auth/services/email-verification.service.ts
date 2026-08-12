@@ -145,68 +145,149 @@ export class EmailVerificationService {
     });
   }
 
-  async confirm(rawToken: string, expectedRole: AuthRole): Promise<void> {
-    const tokenHash = this.tokenHasher.hashToken(rawToken);
 
-    const now = new Date();
+  async confirm(
+    rawToken: string,
+    expectedRole: AuthRole,
+  ): Promise<void> {
+    const tokenHash =
+      this.tokenHasher
+        .hashToken(
+          rawToken,
+        );
 
-    const token = await this.prisma.emailVerificationToken.findUnique({
-      where: {
-        tokenHash,
-      },
-      include: {
-        user: true,
-      },
-    });
+    const now =
+      new Date();
+
+    const token =
+      await this.prisma
+        .emailVerificationToken
+        .findUnique({
+          where: {
+            tokenHash,
+          },
+
+          include: {
+            user:
+              true,
+          },
+        });
 
     if (
       !token ||
-      token.usedAt !== null ||
-      token.expiresAt.getTime() <= now.getTime() ||
-      !roleSatisfiesRequirement(token.user.role, expectedRole) ||
+      token.usedAt !==
+        null ||
+      token.expiresAt
+        .getTime() <=
+        now.getTime() ||
+      !roleSatisfiesRequirement(
+        token.user.role,
+        expectedRole,
+      ) ||
       !token.user.isActive ||
-      token.email !== token.user.email
+      token.email !==
+        token.user.email
     ) {
       throwInvalidVerificationToken();
     }
 
-    await this.prisma.$transaction(async (transaction) => {
-      const claim = await transaction.emailVerificationToken.updateMany({
-        where: {
-          id: token.id,
-          usedAt: null,
-          expiresAt: {
-            gt: now,
-          },
-        },
-        data: {
-          usedAt: now,
-        },
-      });
+    await this.prisma
+      .$transaction(
+        async (
+          transaction,
+        ) => {
+          const claim =
+            await transaction
+              .emailVerificationToken
+              .updateMany({
+                where: {
+                  id:
+                    token.id,
 
-      if (claim.count !== 1) {
-        throwInvalidVerificationToken();
-      }
+                  usedAt:
+                    null,
 
-      await transaction.user.update({
-        where: {
-          id: token.userId,
-        },
-        data: {
-          emailVerifiedAt: now,
-        },
-      });
+                  expiresAt: {
+                    gt:
+                      now,
+                  },
+                },
 
-      await transaction.emailVerificationToken.updateMany({
-        where: {
-          userId: token.userId,
-          usedAt: null,
+                data: {
+                  usedAt:
+                    now,
+                },
+              });
+
+          if (
+            claim.count !==
+            1
+          ) {
+            throwInvalidVerificationToken();
+          }
+
+          await transaction
+            .user
+            .update({
+              where: {
+                id:
+                  token.userId,
+              },
+
+              data: {
+                emailVerifiedAt:
+                  now,
+              },
+            });
+
+          await transaction
+            .emailVerificationToken
+            .updateMany({
+              where: {
+                userId:
+                  token.userId,
+
+                usedAt:
+                  null,
+              },
+
+              data: {
+                usedAt:
+                  now,
+              },
+            });
+
+          await transaction
+            .userActivity
+            .create({
+              data: {
+                subjectUserId:
+                  token.userId,
+
+                actorUserId:
+                  token.userId,
+
+                action:
+                  'EMAIL_VERIFIED',
+
+                resourceType:
+                  'USER',
+
+                resourceId:
+                  token.userId,
+
+                description:
+                  'Verified email address.',
+
+                ipAddress:
+                  token.requesterIp,
+
+                userAgent:
+                  token.userAgent,
+              },
+            });
         },
-        data: {
-          usedAt: now,
-        },
-      });
-    });
+      );
   }
 }
 
