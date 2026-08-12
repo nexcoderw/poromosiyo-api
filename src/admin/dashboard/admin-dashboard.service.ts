@@ -8,6 +8,10 @@ export class AdminDashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getDashboard(): Promise<AdminDashboardResponse> {
+    const now = new Date();
+
+    const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
     const [
       customerTotal,
       customerActive,
@@ -22,6 +26,8 @@ export class AdminDashboardService {
       productTotal,
       productDraft,
       productPublished,
+      productExpired,
+      productExpiringSoon,
       productArchived,
 
       categoryTotal,
@@ -108,6 +114,28 @@ export class AdminDashboardService {
       this.prisma.product.count({
         where: {
           status: 'ACTIVE',
+          expiresAt: {
+            gt: now,
+          },
+        },
+      }),
+
+      this.prisma.product.count({
+        where: {
+          status: 'ACTIVE',
+          expiresAt: {
+            lte: now,
+          },
+        },
+      }),
+
+      this.prisma.product.count({
+        where: {
+          status: 'ACTIVE',
+          expiresAt: {
+            gt: now,
+            lte: sevenDays,
+          },
         },
       }),
 
@@ -196,6 +224,8 @@ export class AdminDashboardService {
         total: productTotal,
         draft: productDraft,
         published: productPublished,
+        expired: productExpired,
+        expiringSoon: productExpiringSoon,
         archived: productArchived,
       },
 
