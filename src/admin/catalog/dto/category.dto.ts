@@ -1,7 +1,4 @@
-import {
-  Transform,
-  Type,
-} from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsInt,
@@ -21,26 +18,18 @@ import {
   CATALOG_SLUG_PATTERN,
   CATEGORY_NAME_MAX_LENGTH,
 } from '../catalog.constants';
-import {
-  CatalogPaginationDto,
-} from './catalog-pagination.dto';
+import { CatalogPaginationDto } from './catalog-pagination.dto';
 
 export class CreateCategoryDto {
   @IsString()
   @MinLength(2)
-  @MaxLength(
-    CATEGORY_NAME_MAX_LENGTH,
-  )
+  @MaxLength(CATEGORY_NAME_MAX_LENGTH)
   name!: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(
-    CATALOG_SLUG_MAX_LENGTH,
-  )
-  @Matches(
-    CATALOG_SLUG_PATTERN,
-  )
+  @MaxLength(CATALOG_SLUG_MAX_LENGTH)
+  @Matches(CATALOG_SLUG_PATTERN)
   slug?: string;
 
   @IsOptional()
@@ -49,9 +38,7 @@ export class CreateCategoryDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(
-    CATALOG_DESCRIPTION_MAX_LENGTH,
-  )
+  @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
   description?: string;
 
   @IsOptional()
@@ -69,51 +56,25 @@ export class UpdateCategoryDto {
   @IsOptional()
   @IsString()
   @MinLength(2)
-  @MaxLength(
-    CATEGORY_NAME_MAX_LENGTH,
-  )
+  @MaxLength(CATEGORY_NAME_MAX_LENGTH)
   name?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(
-    CATALOG_SLUG_MAX_LENGTH,
-  )
-  @Matches(
-    CATALOG_SLUG_PATTERN,
-  )
+  @MaxLength(CATALOG_SLUG_MAX_LENGTH)
+  @Matches(CATALOG_SLUG_PATTERN)
   slug?: string;
 
   @IsOptional()
-  @ValidateIf(
-    (
-      _object,
-      value,
-    ) =>
-      value !==
-      null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsUUID('4')
-  parentId?:
-    | string
-    | null;
+  parentId?: string | null;
 
   @IsOptional()
-  @ValidateIf(
-    (
-      _object,
-      value,
-    ) =>
-      value !==
-      null,
-  )
+  @ValidateIf((_object, value) => value !== null)
   @IsString()
-  @MaxLength(
-    CATALOG_DESCRIPTION_MAX_LENGTH,
-  )
-  description?:
-    | string
-    | null;
+  @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
+  description?: string | null;
 
   @IsOptional()
   @IsBoolean()
@@ -126,15 +87,9 @@ export class UpdateCategoryDto {
   sortOrder?: number;
 }
 
-export class ListCategoriesDto
-  extends CatalogPaginationDto {
+export class ListCategoriesDto extends CatalogPaginationDto {
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   isActive?: boolean;
 
@@ -143,30 +98,17 @@ export class ListCategoriesDto
   parentId?: string;
 
   @IsOptional()
-  @Transform(
-    ({ value }) =>
-      parseOptionalBoolean(
-        value,
-      ),
-  )
+  @Transform(({ value }) => parseOptionalBoolean(value))
   @IsBoolean()
   rootOnly?: boolean;
 }
 
-function parseOptionalBoolean(
-  value: unknown,
-): unknown {
-  if (
-    value ===
-    'true'
-  ) {
+function parseOptionalBoolean(value: unknown): unknown {
+  if (value === 'true') {
     return true;
   }
 
-  if (
-    value ===
-    'false'
-  ) {
+  if (value === 'false') {
     return false;
   }
 
