@@ -1,181 +1,665 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Storage } from '@google-cloud/storage';
-import { randomUUID } from 'node:crypto';
+import {
+  ConfigService,
+} from '@nestjs/config';
+import {
+  Storage,
+} from '@google-cloud/storage';
+import {
+  randomUUID,
+} from 'node:crypto';
 import sharp from 'sharp';
 
 import {
+  CATALOG_IMAGE_MAX_DIMENSION,
+  CATALOG_IMAGE_OUTPUT_MAX_BYTES,
+  IMAGE_CACHE_CONTROL,
   IMAGE_MAX_DIMENSION,
   IMAGE_OUTPUT_MAX_BYTES,
   IMAGE_WEBP_QUALITY,
+  LOGO_IMAGE_MAX_DIMENSION,
+  LOGO_IMAGE_OUTPUT_MAX_BYTES,
 } from './image-storage.constants';
 
-type ImageOwner = 'products' | 'profiles' | 'stores';
+type ImageOwner =
+  | 'products'
+  | 'profiles'
+  | 'stores'
+  | 'categories'
+  | 'brands';
 
 type StoreImageInput = {
-  file: Express.Multer.File;
-  owner: ImageOwner;
-  ownerId: string;
-  slug: string;
+  file:
+    Express.Multer.File;
+
+  owner:
+    ImageOwner;
+
+  ownerId:
+    string;
+
+  slug:
+    string;
+};
+
+type EncodingProfile = {
+  dimension:
+    number;
+
+  quality:
+    number;
 };
 
 @Injectable()
 export class ImageStorageService {
-  private readonly bucket;
-  private readonly bucketName: string;
-  private readonly testMode: boolean;
+  private readonly logger =
+    new Logger(
+      ImageStorageService.name,
+    );
 
-  constructor(config: ConfigService) {
-    const bucketName = config.getOrThrow<string>('GCS_IMAGE_BUCKET');
-    this.bucketName = bucketName;
-    this.bucket = new Storage().bucket(bucketName);
-    this.testMode = config.get<string>('NODE_ENV') === 'test';
+  private readonly bucket;
+
+  private readonly bucketName:
+    string;
+
+  private readonly publicBaseUrl:
+    string;
+
+  private readonly testMode:
+    boolean;
+
+  constructor(
+    config:
+      ConfigService,
+  ) {
+    this.bucketName =
+      config.getOrThrow<string>(
+        'GCS_IMAGE_BUCKET',
+      );
+
+    this.publicBaseUrl =
+      (
+        config.get<string>(
+          'GCS_IMAGE_PUBLIC_BASE_URL',
+        ) ?? ''
+      )
+        .trim()
+        .replace(
+          /\/+$/,
+          '',
+        );
+
+    this.bucket =
+      new Storage()
+        .bucket(
+          this.bucketName,
+        );
+
+    this.testMode =
+      config.get<string>(
+        'NODE_ENV',
+      ) === 'test';
   }
 
-  async store(input: StoreImageInput): Promise<string> {
-    if (!input.file?.buffer?.length) {
-      throw new BadRequestException('An image file is required.');
-    }
-
-    let output: Buffer;
-
-    try {
-      output = await optimizeImage(input.file.buffer);
-    } catch {
-      throw new BadRequestException('The uploaded file is not a valid image.');
-    }
-
-    if (output.length > IMAGE_OUTPUT_MAX_BYTES) {
+  async store(
+    input:
+      StoreImageInput,
+  ): Promise<string> {
+    if (
+      !input.file?.buffer
+        ?.length
+    ) {
       throw new BadRequestException(
-        'The optimized image exceeds 500 KB. Upload a less complex image.',
+        'An image file is required.',
       );
     }
 
-    const objectPath = `${input.owner}/${input.ownerId}/${slugify(input.slug)}-${Date.now()}-${randomUUID()}.webp`;
+    let output:
+      Buffer;
 
-    if (this.testMode) {
-      return publicObjectUrl(this.bucketName, objectPath);
+    try {
+      output =
+        await optimizeImage(
+          input.file.buffer,
+          input.owner,
+        );
+    } catch {
+      throw new BadRequestException(
+        'The uploaded file is not a valid image.',
+      );
+    }
+
+    const maxBytes =
+      getOutputLimit(
+        input.owner,
+      );
+
+    if (
+      output.length >
+      maxBytes
+    ) {
+      throw new BadRequestException(
+        'The optimized image is still too large. Upload a less complex image.',
+      );
+    }
+
+    const objectPath =
+      [
+        input.owner,
+        input.ownerId,
+        `${
+          slugify(
+            input.slug,
+          )
+        }-${
+          Date.now()
+        }-${
+          randomUUID()
+        }.webp`,
+      ].join('/');
+
+    if (
+      this.testMode
+    ) {
+      return buildPublicUrl(
+        this.bucketName,
+        objectPath,
+        this.publicBaseUrl,
+      );
     }
 
     try {
-      await this.bucket.file(objectPath).save(output, {
-        contentType: 'image/webp',
-        resumable: false,
-        validation: 'crc32c',
-        preconditionOpts: { ifGenerationMatch: 0 },
-        metadata: {
-          cacheControl: 'public, max-age=31536000, immutable',
-        },
-      });
+      await this.bucket
+        .file(
+          objectPath,
+        )
+        .save(
+          output,
+          {
+            contentType:
+              'image/webp',
+
+            resumable:
+              false,
+
+            validation:
+              'crc32c',
+
+            preconditionOpts: {
+              ifGenerationMatch:
+                0,
+            },
+
+            metadata: {
+              cacheControl:
+                IMAGE_CACHE_CONTROL,
+
+              contentDisposition:
+                'inline',
+            },
+          },
+        );
     } catch {
       throw new ServiceUnavailableException(
         'Image storage is temporarily unavailable.',
       );
     }
 
-    return publicObjectUrl(this.bucketName, objectPath);
+    return buildPublicUrl(
+      this.bucketName,
+      objectPath,
+      this.publicBaseUrl,
+    );
   }
 
-  async delete(value: string | null | undefined): Promise<void> {
-    const objectPath = managedObjectPath(value, this.bucketName);
+  async delete(
+    value:
+      | string
+      | null
+      | undefined,
+  ): Promise<void> {
+    const objectPath =
+      managedObjectPath(
+        value,
+        this.bucketName,
+        this.publicBaseUrl,
+      );
 
     if (!objectPath) {
       return;
     }
 
-    if (this.testMode) {
+    if (
+      this.testMode
+    ) {
       return;
     }
 
-    await this.bucket.file(objectPath).delete({ ignoreNotFound: true });
+    await this.bucket
+      .file(
+        objectPath,
+      )
+      .delete({
+        ignoreNotFound:
+          true,
+      });
   }
-}
 
-async function optimizeImage(input: Buffer): Promise<Buffer> {
-  const dimensions = [IMAGE_MAX_DIMENSION, 1400, 1200, 1000];
-  const qualities = [IMAGE_WEBP_QUALITY, 76, 70, 64];
-  let smallest: Buffer | undefined;
-
-  for (const dimension of dimensions) {
-    for (const quality of qualities) {
-      const output = await sharp(input, {
-        failOn: 'warning',
-        limitInputPixels: 40_000_000,
-      })
-        .rotate()
-        .resize({
-          width: dimension,
-          height: dimension,
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .webp({ quality, effort: 5 })
-        .toBuffer();
-
-      smallest = output;
-      if (output.length <= IMAGE_OUTPUT_MAX_BYTES) {
-        return output;
-      }
+  async deleteQuietly(
+    value:
+      | string
+      | null
+      | undefined,
+  ): Promise<void> {
+    try {
+      await this.delete(
+        value,
+      );
+    } catch (
+      error: unknown
+    ) {
+      this.logger.warn(
+        `Failed to clean up image object: ${
+          error instanceof
+          Error
+            ? error.message
+            : String(
+                error,
+              )
+        }`,
+      );
     }
   }
 
-  return smallest as Buffer;
+  async deleteManyQuietly(
+    values:
+      readonly (
+        | string
+        | null
+        | undefined
+      )[],
+  ): Promise<void> {
+    await Promise.all(
+      values.map(
+        (value) =>
+          this.deleteQuietly(
+            value,
+          ),
+      ),
+    );
+  }
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .normalize('NFKD')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
+async function optimizeImage(
+  input:
+    Buffer,
+  owner:
+    ImageOwner,
+): Promise<Buffer> {
+  const profiles =
+    getEncodingProfiles(
+      owner,
+    );
 
-  return slug || 'image';
+  let smallest:
+    Buffer | undefined;
+
+  for (
+    const profile
+    of profiles
+  ) {
+    const output =
+      await sharp(
+        input,
+        {
+          failOn:
+            'warning',
+
+          limitInputPixels:
+            40_000_000,
+        },
+      )
+        .rotate()
+        .resize({
+          width:
+            profile.dimension,
+
+          height:
+            profile.dimension,
+
+          fit:
+            'inside',
+
+          withoutEnlargement:
+            true,
+        })
+        .webp({
+          quality:
+            profile.quality,
+
+          effort:
+            4,
+        })
+        .toBuffer();
+
+    smallest =
+      output;
+
+    if (
+      output.length <=
+      getOutputLimit(
+        owner,
+      )
+    ) {
+      return output;
+    }
+  }
+
+  if (!smallest) {
+    throw new Error(
+      'Image encoding failed.',
+    );
+  }
+
+  return smallest;
 }
 
-function isManagedPath(value: string): boolean {
-  return /^(products|profiles|stores)\/[a-zA-Z0-9-]+\//.test(value);
+function getEncodingProfiles(
+  owner:
+    ImageOwner,
+): EncodingProfile[] {
+  if (
+    owner ===
+    'products'
+  ) {
+    return [
+      {
+        dimension:
+          IMAGE_MAX_DIMENSION,
+        quality:
+          IMAGE_WEBP_QUALITY,
+      },
+      {
+        dimension:
+          IMAGE_MAX_DIMENSION,
+        quality:
+          72,
+      },
+      {
+        dimension:
+          1400,
+        quality:
+          74,
+      },
+      {
+        dimension:
+          1200,
+        quality:
+          70,
+      },
+      {
+        dimension:
+          1000,
+        quality:
+          66,
+      },
+    ];
+  }
+
+  if (
+    owner ===
+      'categories'
+  ) {
+    return [
+      {
+        dimension:
+          CATALOG_IMAGE_MAX_DIMENSION,
+        quality:
+          IMAGE_WEBP_QUALITY,
+      },
+      {
+        dimension:
+          1000,
+        quality:
+          74,
+      },
+      {
+        dimension:
+          900,
+        quality:
+          68,
+      },
+    ];
+  }
+
+  return [
+    {
+      dimension:
+        LOGO_IMAGE_MAX_DIMENSION,
+      quality:
+        IMAGE_WEBP_QUALITY,
+    },
+    {
+      dimension:
+        700,
+      quality:
+        74,
+    },
+    {
+      dimension:
+        600,
+      quality:
+        68,
+    },
+  ];
 }
 
-function publicObjectUrl(bucketName: string, objectPath: string): string {
-  const encodedPath = objectPath
-    .split('/')
-    .map((segment) => encodeURIComponent(segment))
-    .join('/');
+function getOutputLimit(
+  owner:
+    ImageOwner,
+): number {
+  if (
+    owner ===
+    'products'
+  ) {
+    return (
+      IMAGE_OUTPUT_MAX_BYTES
+    );
+  }
 
-  return `https://storage.googleapis.com/${encodeURIComponent(bucketName)}/${encodedPath}`;
+  if (
+    owner ===
+    'categories'
+  ) {
+    return (
+      CATALOG_IMAGE_OUTPUT_MAX_BYTES
+    );
+  }
+
+  return (
+    LOGO_IMAGE_OUTPUT_MAX_BYTES
+  );
+}
+
+function slugify(
+  value: string,
+): string {
+  const slug =
+    value
+      .normalize(
+        'NFKD',
+      )
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9]+/g,
+        '-',
+      )
+      .replace(
+        /^-+|-+$/g,
+        '',
+      )
+      .slice(
+        0,
+        80,
+      );
+
+  return (
+    slug ||
+    'image'
+  );
+}
+
+function isManagedPath(
+  value: string,
+): boolean {
+  return /^(products|profiles|stores|categories|brands)\/[a-zA-Z0-9-]+\//.test(
+    value,
+  );
+}
+
+function buildPublicUrl(
+  bucketName:
+    string,
+  objectPath:
+    string,
+  publicBaseUrl:
+    string,
+): string {
+  const encodedPath =
+    objectPath
+      .split('/')
+      .map(
+        (
+          segment,
+        ) =>
+          encodeURIComponent(
+            segment,
+          ),
+      )
+      .join('/');
+
+  if (
+    publicBaseUrl
+  ) {
+    return (
+      `${publicBaseUrl}/${encodedPath}`
+    );
+  }
+
+  return (
+    `https://storage.googleapis.com/${encodeURIComponent(
+      bucketName,
+    )}/${encodedPath}`
+  );
 }
 
 function managedObjectPath(
-  value: string | null | undefined,
-  bucketName: string,
+  value:
+    | string
+    | null
+    | undefined,
+  bucketName:
+    string,
+  publicBaseUrl:
+    string,
 ): string | undefined {
   if (!value) {
     return undefined;
   }
 
-  if (isManagedPath(value)) {
+  if (
+    isManagedPath(
+      value,
+    )
+  ) {
     return value;
   }
 
   try {
-    const url = new URL(value);
-    const prefix = `/${bucketName}/`;
+    const url =
+      new URL(
+        value,
+      );
 
-    if (url.protocol !== 'https:' || url.hostname !== 'storage.googleapis.com') {
+    if (
+      url.protocol !==
+      'https:'
+    ) {
       return undefined;
     }
 
-    if (!url.pathname.startsWith(prefix)) {
-      return undefined;
+    const googlePrefix =
+      `/${bucketName}/`;
+
+    if (
+      url.hostname ===
+        'storage.googleapis.com' &&
+      url.pathname.startsWith(
+        googlePrefix,
+      )
+    ) {
+      const objectPath =
+        decodeURIComponent(
+          url.pathname.slice(
+            googlePrefix.length,
+          ),
+        );
+
+      return isManagedPath(
+        objectPath,
+      )
+        ? objectPath
+        : undefined;
     }
 
-    const objectPath = decodeURIComponent(url.pathname.slice(prefix.length));
-    return isManagedPath(objectPath) ? objectPath : undefined;
+    if (
+      publicBaseUrl
+    ) {
+      const base =
+        new URL(
+          publicBaseUrl,
+        );
+
+      if (
+        url.origin ===
+        base.origin
+      ) {
+        const basePath =
+          base.pathname
+            .replace(
+              /\/+$/,
+              '',
+            );
+
+        const requestedPath =
+          url.pathname.startsWith(
+            `${basePath}/`,
+          )
+            ? url.pathname.slice(
+                basePath.length +
+                  1,
+              )
+            : '';
+
+        const objectPath =
+          decodeURIComponent(
+            requestedPath,
+          );
+
+        return isManagedPath(
+          objectPath,
+        )
+          ? objectPath
+          : undefined;
+      }
+    }
+
+    return undefined;
   } catch {
     return undefined;
   }
