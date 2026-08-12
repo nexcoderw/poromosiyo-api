@@ -3,59 +3,28 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  PrismaService,
-} from '@poromosiyo/db';
+import { PrismaService } from '@poromosiyo/db';
 
 import type {
   GovernancePagination,
   UserActivityResponse,
 } from '../admin-governance.types';
-import type {
-  ListGlobalActivitiesDto,
-} from '../dto/list-global-activities.dto';
-import type {
-  ListUserActivitiesDto,
-} from '../dto/list-user-activities.dto';
+import type { ListGlobalActivitiesDto } from '../dto/list-global-activities.dto';
+import type { ListUserActivitiesDto } from '../dto/list-user-activities.dto';
 
 @Injectable()
 export class AdminUserActivitiesService {
-  constructor(
-    private readonly prisma:
-      PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async listAll(
-    query:
-      ListGlobalActivitiesDto,
-  ): Promise<
-    GovernancePagination<
-      UserActivityResponse
-    >
-  > {
-    const from =
-      query.from
-        ? new Date(
-            query.from,
-          )
-        : undefined;
+    query: ListGlobalActivitiesDto,
+  ): Promise<GovernancePagination<UserActivityResponse>> {
+    const from = query.from ? new Date(query.from) : undefined;
 
-    const to =
-      query.to
-        ? new Date(
-            query.to,
-          )
-        : undefined;
+    const to = query.to ? new Date(query.to) : undefined;
 
-    if (
-      from &&
-      to &&
-      from.getTime() >
-        to.getTime()
-    ) {
-      throw new BadRequestException(
-        '`from` must be before or equal to `to`.',
-      );
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new BadRequestException('`from` must be before or equal to `to`.');
     }
 
     const createdAt =
@@ -63,15 +32,13 @@ export class AdminUserActivitiesService {
         ? {
             ...(from
               ? {
-                  gte:
-                    from,
+                  gte: from,
                 }
               : {}),
 
             ...(to
               ? {
-                  lte:
-                    to,
+                  lte: to,
                 }
               : {}),
           }
@@ -80,36 +47,31 @@ export class AdminUserActivitiesService {
     const where = {
       ...(query.action
         ? {
-            action:
-              query.action,
+            action: query.action,
           }
         : {}),
 
       ...(query.resourceType
         ? {
-            resourceType:
-              query.resourceType,
+            resourceType: query.resourceType,
           }
         : {}),
 
       ...(query.resourceId
         ? {
-            resourceId:
-              query.resourceId,
+            resourceId: query.resourceId,
           }
         : {}),
 
       ...(query.actorUserId
         ? {
-            actorUserId:
-              query.actorUserId,
+            actorUserId: query.actorUserId,
           }
         : {}),
 
       ...(query.subjectUserId
         ? {
-            subjectUserId:
-              query.subjectUserId,
+            subjectUserId: query.subjectUserId,
           }
         : {}),
 
@@ -120,129 +82,70 @@ export class AdminUserActivitiesService {
         : {}),
     };
 
-    const [
-      total,
-      activities,
-    ] =
-      await this.prisma
-        .$transaction([
-          this.prisma
-            .userActivity
-            .count({
-              where,
-            }),
+    const [total, activities] = await this.prisma.$transaction([
+      this.prisma.userActivity.count({
+        where,
+      }),
 
-          this.prisma
-            .userActivity
-            .findMany({
-              where,
+      this.prisma.userActivity.findMany({
+        where,
 
-              skip:
-                (
-                  query.page -
-                  1
-                ) *
-                query.limit,
+        skip: (query.page - 1) * query.limit,
 
-              take:
-                query.limit,
+        take: query.limit,
 
-              orderBy: {
-                createdAt:
-                  'desc',
-              },
+        orderBy: {
+          createdAt: 'desc',
+        },
 
-              include:
-                activityInclude,
-            }),
-        ]);
+        include: activityInclude,
+      }),
+    ]);
 
     return {
-      items:
-        activities as unknown as
-          UserActivityResponse[],
+      items: activities as unknown as UserActivityResponse[],
 
-      page:
-        query.page,
+      page: query.page,
 
-      limit:
-        query.limit,
+      limit: query.limit,
 
       total,
 
-      totalPages:
-        Math.ceil(
-          total /
-          query.limit,
-        ),
+      totalPages: Math.ceil(total / query.limit),
     };
   }
 
   async listCustomerActivities(
     userId: string,
-    query:
-      ListUserActivitiesDto,
-  ): Promise<
-    GovernancePagination<
-      UserActivityResponse
-    >
-  > {
-    await this.assertUserRole(
-      userId,
-      [
-        'CUSTOMER',
-      ],
-    );
+    query: ListUserActivitiesDto,
+  ): Promise<GovernancePagination<UserActivityResponse>> {
+    await this.assertUserRole(userId, ['CUSTOMER']);
 
-    return this.listUser(
-      userId,
-      query,
-    );
+    return this.listUser(userId, query);
   }
 
   async listAdminActivities(
     userId: string,
-    query:
-      ListUserActivitiesDto,
-  ): Promise<
-    GovernancePagination<
-      UserActivityResponse
-    >
-  > {
-    await this.assertUserRole(
-      userId,
-      [
-        'ADMIN',
-        'SUPERADMIN',
-      ],
-    );
+    query: ListUserActivitiesDto,
+  ): Promise<GovernancePagination<UserActivityResponse>> {
+    await this.assertUserRole(userId, ['ADMIN', 'SUPERADMIN']);
 
-    return this.listUser(
-      userId,
-      query,
-    );
+    return this.listUser(userId, query);
   }
 
   private async listUser(
     userId: string,
-    query:
-      ListUserActivitiesDto,
-  ): Promise<
-    GovernancePagination<
-      UserActivityResponse
-    >
-  > {
+    query: ListUserActivitiesDto,
+  ): Promise<GovernancePagination<UserActivityResponse>> {
     const where = {
       AND: [
         {
           OR: [
             {
-              subjectUserId:
-                userId,
+              subjectUserId: userId,
             },
             {
-              actorUserId:
-                userId,
+              actorUserId: userId,
             },
           ],
         },
@@ -250,101 +153,62 @@ export class AdminUserActivitiesService {
         ...(query.action
           ? [
               {
-                action:
-                  query.action,
+                action: query.action,
               },
             ]
           : []),
       ],
     };
 
-    const [
-      total,
-      activities,
-    ] =
-      await this.prisma
-        .$transaction([
-          this.prisma
-            .userActivity
-            .count({
-              where,
-            }),
+    const [total, activities] = await this.prisma.$transaction([
+      this.prisma.userActivity.count({
+        where,
+      }),
 
-          this.prisma
-            .userActivity
-            .findMany({
-              where,
+      this.prisma.userActivity.findMany({
+        where,
 
-              skip:
-                (
-                  query.page -
-                  1
-                ) *
-                query.limit,
+        skip: (query.page - 1) * query.limit,
 
-              take:
-                query.limit,
+        take: query.limit,
 
-              orderBy: {
-                createdAt:
-                  'desc',
-              },
+        orderBy: {
+          createdAt: 'desc',
+        },
 
-              include:
-                activityInclude,
-            }),
-        ]);
+        include: activityInclude,
+      }),
+    ]);
 
     return {
-      items:
-        activities as unknown as
-          UserActivityResponse[],
+      items: activities as unknown as UserActivityResponse[],
 
-      page:
-        query.page,
+      page: query.page,
 
-      limit:
-        query.limit,
+      limit: query.limit,
 
       total,
 
-      totalPages:
-        Math.ceil(
-          total /
-          query.limit,
-        ),
+      totalPages: Math.ceil(total / query.limit),
     };
   }
 
   private async assertUserRole(
     userId: string,
-    roles:
-      readonly string[],
+    roles: readonly string[],
   ): Promise<void> {
-    const user =
-      await this.prisma
-        .user
-        .findUnique({
-          where: {
-            id:
-              userId,
-          },
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
 
-          select: {
-            role:
-              true,
-          },
-        });
+      select: {
+        role: true,
+      },
+    });
 
-    if (
-      !user ||
-      !roles.includes(
-        user.role,
-      )
-    ) {
-      throw new NotFoundException(
-        'Account not found.',
-      );
+    if (!user || !roles.includes(user.role)) {
+      throw new NotFoundException('Account not found.');
     }
   }
 }
@@ -353,24 +217,18 @@ const activityInclude = {
   subjectUser: {
     select: {
       id: true,
-      fullName:
-        true,
-      email:
-        true,
-      role:
-        true,
+      fullName: true,
+      email: true,
+      role: true,
     },
   },
 
   actorUser: {
     select: {
       id: true,
-      fullName:
-        true,
-      email:
-        true,
-      role:
-        true,
+      fullName: true,
+      email: true,
+      role: true,
     },
   },
 } as const;
