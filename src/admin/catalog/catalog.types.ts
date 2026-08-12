@@ -8,7 +8,7 @@ export type PaginatedResult<T> = {
 
 export type AdminProductResponse = {
   id: string;
-  storeId: string | null;
+  storeId: string;
   categoryId: string;
   brandId: string | null;
   name: string;
@@ -32,7 +32,7 @@ export type AdminProductResponse = {
     isActive: boolean;
     logo: string | null;
     website: string | null;
-  } | null;
+  };
 
   category: {
     id: string;
