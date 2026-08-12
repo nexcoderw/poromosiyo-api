@@ -52,3 +52,11 @@ export type ProductPublicationResult = {
   selectedCount: number;
   changedCount: number;
 };
+
+
+export type ProductArchiveResult = {
+  archived: boolean;
+  productIds: string[];
+  selectedCount: number;
+  changedCount: number;
+};
