@@ -3,11 +3,14 @@ import { NestFactory } from '@nestjs/core';
 
 import { AppModule } from './app.module';
 import { configureApplication } from './bootstrap/configure-application';
+import { configureApiDocumentation } from './bootstrap/configure-api-documentation';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   configureApplication(app);
+
+  configureApiDocumentation(app);
 
   const config = app.get(ConfigService);
 
