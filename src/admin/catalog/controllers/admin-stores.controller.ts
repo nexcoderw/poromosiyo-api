@@ -11,8 +11,11 @@ import {
   Post,
   Query,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
@@ -27,6 +30,8 @@ import {
   UpdateStoreDto,
 } from '../dto/store.dto';
 import { AdminStoresService } from '../services/admin-stores.service';
+import { IMAGE_UPLOAD_FIELD } from '../../../storage/image-storage.constants';
+import { imageUploadOptions } from '../../../storage/image-upload.options';
 
 @Controller({
   path: 'admin/stores',
@@ -92,6 +97,15 @@ export class AdminStoresController {
     request: Request,
   ) {
     return this.stores.update(id, dto, admin.id, getSessionMetadata(request));
+  }
+
+  @Patch(':id/logo')
+  @UseInterceptors(FileInterceptor(IMAGE_UPLOAD_FIELD, imageUploadOptions))
+  updateLogo(
+    @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
+    @UploadedFile() image: Express.Multer.File,
+  ) {
+    return this.stores.updateLogo(id, image);
   }
 
   @Delete(':id')
