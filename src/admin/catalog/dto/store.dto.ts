@@ -41,14 +41,6 @@ export class CreateStoreDto {
     require_protocol: true,
   })
   @MaxLength(2048)
-  logo?: string;
-
-  @IsOptional()
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-  })
-  @MaxLength(2048)
   website?: string;
 
   @IsOptional()
@@ -74,15 +66,6 @@ export class UpdateStoreDto {
   @IsString()
   @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
   description?: string | null;
-
-  @IsOptional()
-  @ValidateIf((_object, value) => value !== null)
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-  })
-  @MaxLength(2048)
-  logo?: string | null;
 
   @IsOptional()
   @ValidateIf((_object, value) => value !== null)
