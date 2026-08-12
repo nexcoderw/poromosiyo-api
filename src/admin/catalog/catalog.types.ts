@@ -54,6 +54,8 @@ export type AdminProductResponse = {
     isPrimary: boolean;
     createdAt: Date;
   }>;
+  expiresAt: Date;
+  isExpired: boolean;
 };
 
 export type ProductPublicationResult = {
@@ -72,6 +74,13 @@ export type ProductArchiveResult = {
 
 export type ProductStoreAssignmentResult = {
   storeId: string;
+  productIds: string[];
+  selectedCount: number;
+  changedCount: number;
+};
+
+export type ProductExpirationResult = {
+  expiresAt: Date;
   productIds: string[];
   selectedCount: number;
   changedCount: number;
