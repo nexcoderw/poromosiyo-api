@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module';
 import { AdminCatalogModule } from './admin/catalog/admin-catalog.module';
 import { AdminGovernanceModule } from './admin/governance/admin-governance.module';
 import { AdminDashboardModule } from './admin/dashboard/admin-dashboard.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AdminDashboardModule } from './admin/dashboard/admin-dashboard.module';
     ]),
 
     DatabaseModule,
+    StorageModule,
     AuthModule,
     AdminCatalogModule,
   ],
