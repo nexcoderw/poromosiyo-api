@@ -136,7 +136,7 @@ export class GoogleAuthService {
     idToken: string,
     expectedRole: AuthRole,
   ): Promise<void> {
-    if (principal.role !== expectedRole) {
+    if (!roleSatisfiesRequirement(principal.role, expectedRole)) {
       throw new ForbiddenException('You do not have access to this resource.');
     }
 
