@@ -1,4 +1,6 @@
-import { Transform } from 'class-transformer';
+import {
+  Transform,
+} from 'class-transformer';
 import {
   IsBoolean,
   IsOptional,
@@ -16,37 +18,43 @@ import {
   CATALOG_SLUG_MAX_LENGTH,
   CATALOG_SLUG_PATTERN,
 } from '../catalog.constants';
-import { CatalogPaginationDto } from './catalog-pagination.dto';
+import {
+  CatalogPaginationDto,
+} from './catalog-pagination.dto';
 
 export class CreateBrandDto {
   @IsString()
   @MinLength(2)
-  @MaxLength(BRAND_NAME_MAX_LENGTH)
+  @MaxLength(
+    BRAND_NAME_MAX_LENGTH,
+  )
   name!: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(CATALOG_SLUG_MAX_LENGTH)
-  @Matches(CATALOG_SLUG_PATTERN)
+  @MaxLength(
+    CATALOG_SLUG_MAX_LENGTH,
+  )
+  @Matches(
+    CATALOG_SLUG_PATTERN,
+  )
   slug?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
+  @MaxLength(
+    CATALOG_DESCRIPTION_MAX_LENGTH,
+  )
   description?: string;
 
   @IsOptional()
   @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-  })
-  @MaxLength(2048)
-  logo?: string;
-
-  @IsOptional()
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
+    protocols: [
+      'http',
+      'https',
+    ],
+    require_protocol:
+      true,
   })
   @MaxLength(2048)
   website?: string;
@@ -60,57 +68,92 @@ export class UpdateBrandDto {
   @IsOptional()
   @IsString()
   @MinLength(2)
-  @MaxLength(BRAND_NAME_MAX_LENGTH)
+  @MaxLength(
+    BRAND_NAME_MAX_LENGTH,
+  )
   name?: string;
 
   @IsOptional()
   @IsString()
-  @MaxLength(CATALOG_SLUG_MAX_LENGTH)
-  @Matches(CATALOG_SLUG_PATTERN)
+  @MaxLength(
+    CATALOG_SLUG_MAX_LENGTH,
+  )
+  @Matches(
+    CATALOG_SLUG_PATTERN,
+  )
   slug?: string;
 
   @IsOptional()
-  @ValidateIf((_object, value) => value !== null)
+  @ValidateIf(
+    (
+      _object,
+      value,
+    ) =>
+      value !==
+      null,
+  )
   @IsString()
-  @MaxLength(CATALOG_DESCRIPTION_MAX_LENGTH)
-  description?: string | null;
+  @MaxLength(
+    CATALOG_DESCRIPTION_MAX_LENGTH,
+  )
+  description?:
+    | string
+    | null;
 
   @IsOptional()
-  @ValidateIf((_object, value) => value !== null)
+  @ValidateIf(
+    (
+      _object,
+      value,
+    ) =>
+      value !==
+      null,
+  )
   @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
+    protocols: [
+      'http',
+      'https',
+    ],
+    require_protocol:
+      true,
   })
   @MaxLength(2048)
-  logo?: string | null;
-
-  @IsOptional()
-  @ValidateIf((_object, value) => value !== null)
-  @IsUrl({
-    protocols: ['http', 'https'],
-    require_protocol: true,
-  })
-  @MaxLength(2048)
-  website?: string | null;
+  website?:
+    | string
+    | null;
 
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 }
 
-export class ListBrandsDto extends CatalogPaginationDto {
+export class ListBrandsDto
+  extends CatalogPaginationDto {
   @IsOptional()
-  @Transform(({ value }) => parseOptionalBoolean(value))
+  @Transform(
+    ({ value }) =>
+      parseOptionalBoolean(
+        value,
+      ),
+  )
   @IsBoolean()
   isActive?: boolean;
 }
 
-function parseOptionalBoolean(value: unknown): unknown {
-  if (value === 'true') {
+function parseOptionalBoolean(
+  value: unknown,
+): unknown {
+  if (
+    value ===
+    'true'
+  ) {
     return true;
   }
 
-  if (value === 'false') {
+  if (
+    value ===
+    'false'
+  ) {
     return false;
   }
 
