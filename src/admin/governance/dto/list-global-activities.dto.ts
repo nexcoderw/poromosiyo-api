@@ -1,6 +1,4 @@
-import {
-  Type,
-} from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsInt,
@@ -23,18 +21,14 @@ export class ListGlobalActivitiesDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  page: number =
-    GOVERNANCE_DEFAULT_PAGE;
+  page: number = GOVERNANCE_DEFAULT_PAGE;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(
-    GOVERNANCE_MAX_LIMIT,
-  )
-  limit: number =
-    GOVERNANCE_DEFAULT_LIMIT;
+  @Max(GOVERNANCE_MAX_LIMIT)
+  limit: number = GOVERNANCE_DEFAULT_LIMIT;
 
   @IsOptional()
   @IsString()
