@@ -229,10 +229,8 @@ describe('Poromosiyo admin catalog (e2e)', () => {
     const response = await request(app.getHttpServer())
       .post(`/api/v1/admin/products/${productId}/images`)
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
-      .send({
-        url: 'https://example.test/product-image.jpg',
-        altText: 'Discounted catalog product',
-      })
+      .field('altText', 'Discounted catalog product')
+      .attach('image', testImageBuffer(), 'product.png')
       .expect(201);
 
     const body = parseObject(response.text);
@@ -408,4 +406,11 @@ function requireString(value: unknown): string {
   }
 
   return value;
+}
+
+function testImageBuffer(): Buffer {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
 }
