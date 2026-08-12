@@ -1,6 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
   IsIn,
   IsOptional,
   IsString,
@@ -17,11 +18,13 @@ import {
   CURRENCY_PATTERN,
   MONEY_PATTERN,
   PRODUCT_DESCRIPTION_MAX_LENGTH,
+  PRODUCT_EXPIRATION_STATUSES,
   PRODUCT_NAME_MAX_LENGTH,
   PRODUCT_SHORT_DESCRIPTION_MAX_LENGTH,
   PRODUCT_SKU_MAX_LENGTH,
   PRODUCT_SKU_PATTERN,
   PRODUCT_STATUSES,
+  type CatalogProductExpirationStatus,
   type CatalogProductStatus,
 } from '../catalog.constants';
 import { CatalogPaginationDto } from './catalog-pagination.dto';
@@ -75,6 +78,11 @@ export class CreateProductDto {
   @IsString()
   @Matches(MONEY_PATTERN)
   sellingPrice!: string;
+
+  @IsDateString({
+    strict: true,
+  })
+  expiresAt!: string;
 
   @IsOptional()
   @IsBoolean()
@@ -141,18 +149,28 @@ export class UpdateProductDto {
   sellingPrice?: string;
 
   @IsOptional()
+  @IsDateString({
+    strict: true,
+  })
+  expiresAt?: string;
+
+  @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
 }
 
 export class ListProductsDto extends CatalogPaginationDto {
   @IsOptional()
-  @IsUUID('4')
-  storeId?: string;
-
-  @IsOptional()
   @IsIn(PRODUCT_STATUSES)
   status?: CatalogProductStatus;
+
+  @IsOptional()
+  @IsIn(PRODUCT_EXPIRATION_STATUSES)
+  expirationStatus?: CatalogProductExpirationStatus;
+
+  @IsOptional()
+  @IsUUID('4')
+  storeId?: string;
 
   @IsOptional()
   @IsUUID('4')
