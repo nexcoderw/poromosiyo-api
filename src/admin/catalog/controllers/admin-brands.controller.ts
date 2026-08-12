@@ -10,36 +10,63 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
+import type {
+  Request,
+} from 'express';
 
-import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
-import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
-import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
-import type { AuthPrincipal } from '../../../auth/types/auth.types';
+import {
+  CurrentUser,
+} from '../../../auth/decorators/current-user.decorator';
+import {
+  RequireAuthRoles,
+} from '../../../auth/decorators/require-auth-roles.decorator';
+import {
+  AuthRoleGuard,
+} from '../../../auth/guards/auth-role.guard';
+import {
+  JwtAuthGuard,
+} from '../../../auth/guards/jwt-auth.guard';
+import {
+  getSessionMetadata,
+} from '../../../auth/request-metadata';
+import type {
+  AuthPrincipal,
+} from '../../../auth/types/auth.types';
 import {
   CreateBrandDto,
   ListBrandsDto,
   UpdateBrandDto,
 } from '../dto/brand.dto';
-import { AdminBrandsService } from '../services/admin-brands.service';
+import {
+  AdminBrandsService,
+} from '../services/admin-brands.service';
 
 @Controller({
   path: 'admin/brands',
   version: '1',
 })
 @RequireAuthRoles('ADMIN')
-@UseGuards(JwtAuthGuard, AuthRoleGuard)
+@UseGuards(
+  JwtAuthGuard,
+  AuthRoleGuard,
+)
 export class AdminBrandsController {
-  constructor(private readonly brands: AdminBrandsService) {}
+  constructor(
+    private readonly brands:
+      AdminBrandsService,
+  ) {}
 
   @Get()
   list(
     @Query()
     query: ListBrandsDto,
   ) {
-    return this.brands.list(query);
+    return this.brands.list(
+      query,
+    );
   }
 
   @Get(':id')
@@ -52,17 +79,29 @@ export class AdminBrandsController {
     )
     id: string,
   ) {
-    return this.brands.get(id);
+    return this.brands.get(
+      id,
+    );
   }
 
   @Post()
   create(
     @Body()
     dto: CreateBrandDto,
+
     @CurrentUser()
     admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
   ) {
-    return this.brands.create(dto, admin.id);
+    return this.brands.create(
+      dto,
+      admin.id,
+      getSessionMetadata(
+        request,
+      ),
+    );
   }
 
   @Patch(':id')
@@ -74,16 +113,30 @@ export class AdminBrandsController {
       }),
     )
     id: string,
+
     @Body()
     dto: UpdateBrandDto,
+
     @CurrentUser()
     admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
   ) {
-    return this.brands.update(id, dto, admin.id);
+    return this.brands.update(
+      id,
+      dto,
+      admin.id,
+      getSessionMetadata(
+        request,
+      ),
+    );
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(
+    HttpStatus.NO_CONTENT,
+  )
   async remove(
     @Param(
       'id',
@@ -92,9 +145,19 @@ export class AdminBrandsController {
       }),
     )
     id: string,
+
     @CurrentUser()
     admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
   ): Promise<void> {
-    await this.brands.remove(id, admin.id);
+    await this.brands.remove(
+      id,
+      admin.id,
+      getSessionMetadata(
+        request,
+      ),
+    );
   }
 }
