@@ -322,10 +322,8 @@ describe('Poromosiyo admin product publication (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/api/v1/admin/products/${productId}/images`)
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
-      .send({
-        url: `https://example.test/${suffixValue}.jpg`,
-        altText: `Product ${suffixValue}`,
-      })
+      .field('altText', `Product ${suffixValue}`)
+      .attach('image', testImageBuffer(), `${suffixValue}.png`)
       .expect(201);
   }
 
@@ -427,4 +425,11 @@ function requireString(value: unknown): string {
   }
 
   return value;
+}
+
+function testImageBuffer(): Buffer {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
 }
