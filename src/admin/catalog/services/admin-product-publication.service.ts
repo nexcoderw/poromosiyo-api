@@ -20,6 +20,10 @@ type PublicationCandidate = {
   status: string;
   description: string | null;
 
+  store: {
+    isActive: boolean;
+  } | null;
+
   category: {
     isActive: boolean;
   };
@@ -64,6 +68,12 @@ export class AdminProductPublicationService {
           name: true,
           status: true,
           description: true,
+
+          store: {
+            select: {
+              isActive: true,
+            },
+          },
 
           category: {
             select: {
@@ -208,6 +218,12 @@ function assertPublicationReady(
 
     if (!product.description?.trim()) {
       reasons.push('Product description is required.');
+    }
+
+    if (!product.store) {
+      reasons.push('Product store is required.');
+    } else if (!product.store.isActive) {
+      reasons.push('Product store must be active.');
     }
 
     if (!product.category.isActive) {
