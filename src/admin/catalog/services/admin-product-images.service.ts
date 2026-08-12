@@ -106,10 +106,7 @@ export class AdminProductImagesService {
         return created;
       });
     } catch (error) {
-      await this.imageStorage
-        .deleteQuietly(
-          objectPath,
-        );
+      await this.imageStorage.deleteQuietly(objectPath);
       throw error;
     }
 
@@ -314,10 +311,7 @@ export class AdminProductImagesService {
       });
     });
 
-    await this.imageStorage
-      .deleteQuietly(
-        image.url,
-      );
+    await this.imageStorage.deleteQuietly(image.url);
 
     this.logger.log(
       `catalog.product_image.deleted actor=${actorId} product=${productId} image=${imageId}`,
