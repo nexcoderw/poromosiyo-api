@@ -58,6 +58,7 @@
     "milestone:19:check": "npm --prefix ../db run milestone:19:check && npm run ci:check && npm run api:db-check && npm run test:e2e"
   },
   "dependencies": {
+    "@google-cloud/storage": "^7.22.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -65,15 +66,18 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/throttler": "^6.5.0",
     "@poromosiyo/db": "file:../db",
+    "@types/multer": "^2.2.0",
     "argon2": "^0.45.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "google-auth-library": "^11.0.1",
     "helmet": "^8.3.0",
     "joi": "^18.2.3",
+    "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
