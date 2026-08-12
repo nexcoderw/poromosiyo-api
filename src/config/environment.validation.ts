@@ -82,10 +82,7 @@ const environmentSchema = Joi.object({
 
   GCS_IMAGE_BUCKET: Joi.string().trim().default('poromosiyo-images'),
 
-  GCS_IMAGE_PUBLIC_BASE_URL: Joi.string()
-    .trim()
-    .allow('')
-    .default(''),
+  GCS_IMAGE_PUBLIC_BASE_URL: Joi.string().trim().allow('').default(''),
 }).unknown(true);
 
 export function validateEnvironment(
