@@ -55,7 +55,13 @@
     "admin:operations-acceptance": "jest --config ./test/jest-e2e.json --runInBand admin-operations.e2e-spec.ts",
     "milestone:18:check": "npm --prefix ../db run milestone:14:check && npm run admin:contract-check && npm run admin:operations-check && npm run ci:check && npm run api:db-check && npm run test:e2e",
     "store:acceptance": "jest --config ./test/jest-e2e.json --runInBand admin-stores.e2e-spec.ts",
-    "milestone:19:check": "npm --prefix ../db run milestone:19:check && npm run ci:check && npm run api:db-check && npm run test:e2e"
+    "milestone:19:check": "npm --prefix ../db run milestone:19:check && npm run ci:check && npm run api:db-check && npm run test:e2e",
+    "gcs:public-check": "npm run db:build && ts-node src/scripts/check-public-image-storage.ts",
+    "media:data-check": "npm run db:build && ts-node src/scripts/check-catalog-media.ts",
+    "media:contract-check": "npm run db:build && ts-node src/scripts/check-media-contract.ts",
+    "media:acceptance": "jest --config ./test/jest-e2e.json --runInBand admin-media.e2e-spec.ts",
+    "milestone:20:check": "npm run media:contract-check && npm run ci:check && npm run api:db-check && npm run test:e2e",
+    "milestone:20:live-check": "npm run milestone:20:check && npm run media:data-check && npm run gcs:public-check"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.22.0",
