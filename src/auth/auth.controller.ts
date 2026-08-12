@@ -45,6 +45,7 @@ import { EmailVerificationService } from './services/email-verification.service'
 import { PasswordRecoveryService } from './services/password-recovery.service';
 import { ProfileImageService } from './services/profile-image.service';
 import { IMAGE_UPLOAD_FIELD } from '../storage/image-storage.constants';
+import { ApiImageUpload } from '../storage/api-image-upload.decorator';
 import { imageUploadOptions } from '../storage/image-upload.options';
 import type {
   AuthenticatedUser,
@@ -250,6 +251,7 @@ export class AuthController {
   }
 
   @Post('me/image')
+  @ApiImageUpload()
   @RequireAuthRoles('CUSTOMER')
   @UseGuards(JwtAuthGuard, AuthRoleGuard)
   @UseInterceptors(FileInterceptor(IMAGE_UPLOAD_FIELD, imageUploadOptions))
