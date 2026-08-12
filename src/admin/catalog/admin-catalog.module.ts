@@ -12,6 +12,7 @@ import { AdminProductsController } from './controllers/admin-products.controller
 import { AdminBrandsService } from './services/admin-brands.service';
 import { AdminCategoriesService } from './services/admin-categories.service';
 import { AdminProductArchiveService } from './services/admin-product-archive.service';
+import { AdminProductExpirationService } from './services/admin-product-expiration.service';
 import { AdminProductImagesService } from './services/admin-product-images.service';
 import { AdminProductPublicationService } from './services/admin-product-publication.service';
 import { AdminProductsService } from './services/admin-products.service';
@@ -36,6 +37,7 @@ import { AdminProductsService } from './services/admin-products.service';
     AdminProductPublicationService,
     AdminProductStoreService,
     AdminProductArchiveService,
+    AdminProductExpirationService,
   ],
 })
 export class AdminCatalogModule {}
