@@ -1,5 +1,8 @@
 import { createCatalogActivityData } from '../utils/catalog-activity.util';
-import { CATALOG_ACTIVITY_ACTION, CATALOG_RESOURCE_TYPE } from '../catalog-activity.constants';
+import {
+  CATALOG_ACTIVITY_ACTION,
+  CATALOG_RESOURCE_TYPE,
+} from '../catalog-activity.constants';
 import type { SessionMetadata } from '../../../auth/types/auth.types';
 import {
   ConflictException,
@@ -108,106 +111,63 @@ export class AdminBrandsService {
     return brand;
   }
 
-
   async create(
     dto: CreateBrandDto,
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    const slug =
-      await this.resolveUniqueSlug(
-        dto.slug ?? dto.name,
-        null,
-      );
+    const slug = await this.resolveUniqueSlug(dto.slug ?? dto.name, null);
 
     try {
-      const brand =
-        await this.prisma
-          .$transaction(
-            async (
-              transaction,
-            ) => {
-              const created =
-                await transaction
-                  .brand
-                  .create({
-                    data: {
-                      name:
-                        dto.name.trim(),
+      const brand = await this.prisma.$transaction(async (transaction) => {
+        const created = await transaction.brand.create({
+          data: {
+            name: dto.name.trim(),
 
-                      slug,
+            slug,
 
-                      description:
-                        normalizeNullableText(
-                          dto.description,
-                        ),
+            description: normalizeNullableText(dto.description),
 
-                      logo:
-                        dto.logo ??
-                        null,
+            logo: dto.logo ?? null,
 
-                      website:
-                        dto.website ??
-                        null,
+            website: dto.website ?? null,
 
-                      isActive:
-                        dto.isActive ??
-                        true,
-                    },
-                  });
+            isActive: dto.isActive ?? true,
+          },
+        });
 
-              await transaction
-                .userActivity
-                .create({
-                  data:
-                    createCatalogActivityData({
-                      actorId,
+        await transaction.userActivity.create({
+          data: createCatalogActivityData({
+            actorId,
 
-                      action:
-                        CATALOG_ACTIVITY_ACTION
-                          .BRAND_CREATED,
+            action: CATALOG_ACTIVITY_ACTION.BRAND_CREATED,
 
-                      resourceType:
-                        CATALOG_RESOURCE_TYPE
-                          .BRAND,
+            resourceType: CATALOG_RESOURCE_TYPE.BRAND,
 
-                      resourceId:
-                        created.id,
+            resourceId: created.id,
 
-                      description:
-                        `Created brand: ${created.name}`,
+            description: `Created brand: ${created.name}`,
 
-                      metadata,
-                    }),
-                });
+            metadata,
+          }),
+        });
 
-              return created;
-            },
-          );
+        return created;
+      });
 
       this.logger.log(
         `catalog.brand.created actor=${actorId} brand=${brand.id}`,
       );
 
       return brand;
-    } catch (
-      error: unknown
-    ) {
-      if (
-        isPrismaErrorCode(
-          error,
-          'P2002',
-        )
-      ) {
-        throw new ConflictException(
-          'Brand slug already exists.',
-        );
+    } catch (error: unknown) {
+      if (isPrismaErrorCode(error, 'P2002')) {
+        throw new ConflictException('Brand slug already exists.');
       }
 
       throw error;
     }
   }
-
 
   async update(
     id: string,
@@ -215,221 +175,141 @@ export class AdminBrandsService {
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    const existing =
-      await this.prisma
-        .brand
-        .findUnique({
-          where: {
-            id,
-          },
+    const existing = await this.prisma.brand.findUnique({
+      where: {
+        id,
+      },
 
-          include: {
-            _count: {
-              select: {
-                products: {
-                  where: {
-                    status:
-                      'ACTIVE',
-                  },
-                },
+      include: {
+        _count: {
+          select: {
+            products: {
+              where: {
+                status: 'ACTIVE',
               },
             },
           },
-        });
+        },
+      },
+    });
 
     if (!existing) {
-      throw new NotFoundException(
-        'Brand not found.',
-      );
+      throw new NotFoundException('Brand not found.');
     }
 
-    if (
-      dto.isActive ===
-        false &&
-      existing._count.products >
-        0
-    ) {
+    if (dto.isActive === false && existing._count.products > 0) {
       throw new ConflictException(
         'Remove or archive active products before deactivating this brand.',
       );
     }
 
-    let slug:
-      string | undefined;
+    let slug: string | undefined;
 
-    if (
-      dto.slug !==
-      undefined
-    ) {
-      slug =
-        await this.resolveUniqueSlug(
-          dto.slug,
-          id,
-        );
+    if (dto.slug !== undefined) {
+      slug = await this.resolveUniqueSlug(dto.slug, id);
     }
 
     try {
-      const brand =
-        await this.prisma
-          .$transaction(
-            async (
-              transaction,
-            ) => {
-              const updated =
-                await transaction
-                  .brand
-                  .update({
-                    where: {
-                      id,
-                    },
+      const brand = await this.prisma.$transaction(async (transaction) => {
+        const updated = await transaction.brand.update({
+          where: {
+            id,
+          },
 
-                    data: {
-                      name:
-                        dto.name
-                          ?.trim(),
+          data: {
+            name: dto.name?.trim(),
 
-                      slug,
+            slug,
 
-                      description:
-                        dto.description ===
-                          undefined
-                          ? undefined
-                          : normalizeNullableText(
-                              dto.description,
-                            ),
+            description:
+              dto.description === undefined
+                ? undefined
+                : normalizeNullableText(dto.description),
 
-                      logo:
-                        dto.logo,
+            logo: dto.logo,
 
-                      website:
-                        dto.website,
+            website: dto.website,
 
-                      isActive:
-                        dto.isActive,
-                    },
-                  });
+            isActive: dto.isActive,
+          },
+        });
 
-              await transaction
-                .userActivity
-                .create({
-                  data:
-                    createCatalogActivityData({
-                      actorId,
+        await transaction.userActivity.create({
+          data: createCatalogActivityData({
+            actorId,
 
-                      action:
-                        CATALOG_ACTIVITY_ACTION
-                          .BRAND_UPDATED,
+            action: CATALOG_ACTIVITY_ACTION.BRAND_UPDATED,
 
-                      resourceType:
-                        CATALOG_RESOURCE_TYPE
-                          .BRAND,
+            resourceType: CATALOG_RESOURCE_TYPE.BRAND,
 
-                      resourceId:
-                        updated.id,
+            resourceId: updated.id,
 
-                      description:
-                        `Updated brand: ${updated.name}`,
+            description: `Updated brand: ${updated.name}`,
 
-                      metadata,
-                    }),
-                });
+            metadata,
+          }),
+        });
 
-              return updated;
-            },
-          );
+        return updated;
+      });
 
-      this.logger.log(
-        `catalog.brand.updated actor=${actorId} brand=${id}`,
-      );
+      this.logger.log(`catalog.brand.updated actor=${actorId} brand=${id}`);
 
       return brand;
-    } catch (
-      error: unknown
-    ) {
-      if (
-        isPrismaErrorCode(
-          error,
-          'P2002',
-        )
-      ) {
-        throw new ConflictException(
-          'Brand slug already exists.',
-        );
+    } catch (error: unknown) {
+      if (isPrismaErrorCode(error, 'P2002')) {
+        throw new ConflictException('Brand slug already exists.');
       }
 
       throw error;
     }
   }
 
-
   async remove(
     id: string,
     actorId: string,
     metadata: SessionMetadata,
   ): Promise<void> {
-    const existing =
-      await this.prisma
-        .brand
-        .findUnique({
-          where: {
-            id,
-          },
+    const existing = await this.prisma.brand.findUnique({
+      where: {
+        id,
+      },
 
-          select: {
-            id: true,
-            name: true,
-          },
-        });
+      select: {
+        id: true,
+        name: true,
+      },
+    });
 
     if (!existing) {
-      throw new NotFoundException(
-        'Brand not found.',
-      );
+      throw new NotFoundException('Brand not found.');
     }
 
-    await this.prisma
-      .$transaction(
-        async (
-          transaction,
-        ) => {
-          await transaction
-            .brand
-            .delete({
-              where: {
-                id,
-              },
-            });
-
-          await transaction
-            .userActivity
-            .create({
-              data:
-                createCatalogActivityData({
-                  actorId,
-
-                  action:
-                    CATALOG_ACTIVITY_ACTION
-                      .BRAND_DELETED,
-
-                  resourceType:
-                    CATALOG_RESOURCE_TYPE
-                      .BRAND,
-
-                  resourceId:
-                    id,
-
-                  description:
-                    `Deleted brand: ${existing.name}`,
-
-                  metadata,
-                }),
-            });
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.brand.delete({
+        where: {
+          id,
         },
-      );
+      });
 
-    this.logger.log(
-      `catalog.brand.deleted actor=${actorId} brand=${id}`,
-    );
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
+
+          action: CATALOG_ACTIVITY_ACTION.BRAND_DELETED,
+
+          resourceType: CATALOG_RESOURCE_TYPE.BRAND,
+
+          resourceId: id,
+
+          description: `Deleted brand: ${existing.name}`,
+
+          metadata,
+        }),
+      });
+    });
+
+    this.logger.log(`catalog.brand.deleted actor=${actorId} brand=${id}`);
   }
 
   private async resolveUniqueSlug(
