@@ -37,107 +37,69 @@ export class AdminBrandsService {
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    const brand =
-      await this.prisma
-        .brand
-        .findUnique({
-          where: {
-            id,
-          },
+    const brand = await this.prisma.brand.findUnique({
+      where: {
+        id,
+      },
 
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            logo: true,
-          },
-        });
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logo: true,
+      },
+    });
 
     if (!brand) {
-      throw new NotFoundException(
-        'Brand not found.',
-      );
+      throw new NotFoundException('Brand not found.');
     }
 
-    const uploaded =
-      await this.imageStorage
-        .store({
-          file,
-          owner:
-            'brands',
-          ownerId:
-            brand.id,
-          slug:
-            brand.slug ||
-            brand.name,
-        });
+    const uploaded = await this.imageStorage.store({
+      file,
+      owner: 'brands',
+      ownerId: brand.id,
+      slug: brand.slug || brand.name,
+    });
 
     let updated;
 
     try {
-      updated =
-        await this.prisma
-          .$transaction(
-            async (
-              transaction,
-            ) => {
-              const result =
-                await transaction
-                  .brand
-                  .update({
-                    where: {
-                      id,
-                    },
+      updated = await this.prisma.$transaction(async (transaction) => {
+        const result = await transaction.brand.update({
+          where: {
+            id,
+          },
 
-                    data: {
-                      logo:
-                        uploaded,
-                    },
-                  });
+          data: {
+            logo: uploaded,
+          },
+        });
 
-              await transaction
-                .userActivity
-                .create({
-                  data:
-                    createCatalogActivityData({
-                      actorId,
+        await transaction.userActivity.create({
+          data: createCatalogActivityData({
+            actorId,
 
-                      action:
-                        CATALOG_ACTIVITY_ACTION
-                          .BRAND_LOGO_UPDATED,
+            action: CATALOG_ACTIVITY_ACTION.BRAND_LOGO_UPDATED,
 
-                      resourceType:
-                        CATALOG_RESOURCE_TYPE
-                          .BRAND,
+            resourceType: CATALOG_RESOURCE_TYPE.BRAND,
 
-                      resourceId:
-                        brand.id,
+            resourceId: brand.id,
 
-                      description:
-                        `Updated brand logo: ${brand.name}`,
+            description: `Updated brand logo: ${brand.name}`,
 
-                      metadata,
-                    }),
-                });
+            metadata,
+          }),
+        });
 
-              return result;
-            },
-          );
-    } catch (
-      error: unknown
-    ) {
-      await this.imageStorage
-        .deleteQuietly(
-          uploaded,
-        );
+        return result;
+      });
+    } catch (error: unknown) {
+      await this.imageStorage.deleteQuietly(uploaded);
 
       throw error;
     }
 
-    await this.imageStorage
-      .deleteQuietly(
-        brand.logo,
-      );
+    await this.imageStorage.deleteQuietly(brand.logo);
 
     return updated;
   }
@@ -147,80 +109,55 @@ export class AdminBrandsService {
     actorId: string,
     metadata: SessionMetadata,
   ): Promise<void> {
-    const brand =
-      await this.prisma
-        .brand
-        .findUnique({
-          where: {
-            id,
-          },
+    const brand = await this.prisma.brand.findUnique({
+      where: {
+        id,
+      },
 
-          select: {
-            id: true,
-            name: true,
-            logo: true,
-          },
-        });
+      select: {
+        id: true,
+        name: true,
+        logo: true,
+      },
+    });
 
     if (!brand) {
-      throw new NotFoundException(
-        'Brand not found.',
-      );
+      throw new NotFoundException('Brand not found.');
     }
 
     if (!brand.logo) {
       return;
     }
 
-    await this.prisma
-      .$transaction(
-        async (
-          transaction,
-        ) => {
-          await transaction
-            .brand
-            .update({
-              where: {
-                id,
-              },
-
-              data: {
-                logo:
-                  null,
-              },
-            });
-
-          await transaction
-            .userActivity
-            .create({
-              data:
-                createCatalogActivityData({
-                  actorId,
-
-                  action:
-                    CATALOG_ACTIVITY_ACTION
-                      .BRAND_LOGO_REMOVED,
-
-                  resourceType:
-                    CATALOG_RESOURCE_TYPE
-                      .BRAND,
-
-                  resourceId:
-                    id,
-
-                  description:
-                    `Removed brand logo: ${brand.name}`,
-
-                  metadata,
-                }),
-            });
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.brand.update({
+        where: {
+          id,
         },
-      );
 
-    await this.imageStorage
-      .deleteQuietly(
-        brand.logo,
-      );
+        data: {
+          logo: null,
+        },
+      });
+
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
+
+          action: CATALOG_ACTIVITY_ACTION.BRAND_LOGO_REMOVED,
+
+          resourceType: CATALOG_RESOURCE_TYPE.BRAND,
+
+          resourceId: id,
+
+          description: `Removed brand logo: ${brand.name}`,
+
+          metadata,
+        }),
+      });
+    });
+
+    await this.imageStorage.deleteQuietly(brand.logo);
   }
 
   async list(query: ListBrandsDto): Promise<PaginatedResult<unknown>> {
@@ -324,7 +261,6 @@ export class AdminBrandsService {
 
             description: normalizeNullableText(dto.description),
 
-
             website: dto.website ?? null,
 
             isActive: dto.isActive ?? true,
@@ -421,7 +357,6 @@ export class AdminBrandsService {
                 ? undefined
                 : normalizeNullableText(dto.description),
 
-
             website: dto.website,
 
             isActive: dto.isActive,
@@ -504,10 +439,7 @@ export class AdminBrandsService {
       });
     });
 
-    await this.imageStorage
-      .deleteQuietly(
-        existing.logo,
-      );
+    await this.imageStorage.deleteQuietly(existing.logo);
 
     this.logger.log(`catalog.brand.deleted actor=${actorId} brand=${id}`);
   }
