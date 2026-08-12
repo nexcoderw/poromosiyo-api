@@ -179,11 +179,8 @@ describe('Poromosiyo admin operations completion (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/api/v1/admin/products/${firstProductId}/images`)
       .set('Authorization', `Bearer ${admin.accessToken}`)
-      .send({
-        url: 'https://example.test/m18-a.jpg',
-
-        altText: 'Milestone 18 Product A',
-      })
+      .field('altText', 'Milestone 18 Product A')
+      .attach('image', testImageBuffer(), 'm18-a.png')
       .expect(201);
   });
 
@@ -642,6 +639,13 @@ function requireString(value: unknown): string {
   }
 
   return value;
+}
+
+function testImageBuffer(): Buffer {
+  return Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  );
 }
 
 function readSessionId(accessToken: string): string {
