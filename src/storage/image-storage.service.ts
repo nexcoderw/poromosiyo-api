@@ -26,10 +26,12 @@ type StoreImageInput = {
 @Injectable()
 export class ImageStorageService {
   private readonly bucket;
+  private readonly bucketName: string;
   private readonly testMode: boolean;
 
   constructor(config: ConfigService) {
     const bucketName = config.getOrThrow<string>('GCS_IMAGE_BUCKET');
+    this.bucketName = bucketName;
     this.bucket = new Storage().bucket(bucketName);
     this.testMode = config.get<string>('NODE_ENV') === 'test';
   }
@@ -56,7 +58,7 @@ export class ImageStorageService {
     const objectPath = `${input.owner}/${input.ownerId}/${slugify(input.slug)}-${Date.now()}-${randomUUID()}.webp`;
 
     if (this.testMode) {
-      return objectPath;
+      return publicObjectUrl(this.bucketName, objectPath);
     }
 
     try {
@@ -75,11 +77,13 @@ export class ImageStorageService {
       );
     }
 
-    return objectPath;
+    return publicObjectUrl(this.bucketName, objectPath);
   }
 
-  async delete(objectPath: string | null | undefined): Promise<void> {
-    if (!objectPath || !isManagedPath(objectPath)) {
+  async delete(value: string | null | undefined): Promise<void> {
+    const objectPath = managedObjectPath(value, this.bucketName);
+
+    if (!objectPath) {
       return;
     }
 
@@ -135,4 +139,44 @@ function slugify(value: string): string {
 
 function isManagedPath(value: string): boolean {
   return /^(products|profiles|stores)\/[a-zA-Z0-9-]+\//.test(value);
+}
+
+function publicObjectUrl(bucketName: string, objectPath: string): string {
+  const encodedPath = objectPath
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+
+  return `https://storage.googleapis.com/${encodeURIComponent(bucketName)}/${encodedPath}`;
+}
+
+function managedObjectPath(
+  value: string | null | undefined,
+  bucketName: string,
+): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (isManagedPath(value)) {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+    const prefix = `/${bucketName}/`;
+
+    if (url.protocol !== 'https:' || url.hostname !== 'storage.googleapis.com') {
+      return undefined;
+    }
+
+    if (!url.pathname.startsWith(prefix)) {
+      return undefined;
+    }
+
+    const objectPath = decodeURIComponent(url.pathname.slice(prefix.length));
+    return isManagedPath(objectPath) ? objectPath : undefined;
+  } catch {
+    return undefined;
+  }
 }
