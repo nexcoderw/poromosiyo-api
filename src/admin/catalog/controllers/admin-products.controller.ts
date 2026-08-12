@@ -22,6 +22,7 @@ import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { getSessionMetadata } from '../../../auth/request-metadata';
 import type { AuthPrincipal } from '../../../auth/types/auth.types';
 import { ProductArchiveDto } from '../dto/product-archive.dto';
+import { ProductExpirationDto } from '../dto/product-expiration.dto';
 import { ProductPublicationDto } from '../dto/product-publication.dto';
 import { ProductStoreAssignmentDto } from '../dto/product-store.dto';
 import {
@@ -30,6 +31,7 @@ import {
   UpdateProductDto,
 } from '../dto/product.dto';
 import { AdminProductArchiveService } from '../services/admin-product-archive.service';
+import { AdminProductExpirationService } from '../services/admin-product-expiration.service';
 import { AdminProductPublicationService } from '../services/admin-product-publication.service';
 import { AdminProductStoreService } from '../services/admin-product-store.service';
 import { AdminProductsService } from '../services/admin-products.service';
@@ -49,6 +51,8 @@ export class AdminProductsController {
     private readonly productStore: AdminProductStoreService,
 
     private readonly archive: AdminProductArchiveService,
+
+    private readonly expiration: AdminProductExpirationService,
   ) {}
 
   @Get()
@@ -103,6 +107,24 @@ export class AdminProductsController {
     request: Request,
   ) {
     return this.productStore.assignStore(
+      dto,
+      admin.id,
+      getSessionMetadata(request),
+    );
+  }
+
+  @Patch('expiration')
+  setExpiration(
+    @Body()
+    dto: ProductExpirationDto,
+
+    @CurrentUser()
+    admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
+  ) {
+    return this.expiration.setExpiration(
       dto,
       admin.id,
       getSessionMetadata(request),
