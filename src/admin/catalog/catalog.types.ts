@@ -8,6 +8,7 @@ export type PaginatedResult<T> = {
 
 export type AdminProductResponse = {
   id: string;
+  storeId: string | null;
   categoryId: string;
   brandId: string | null;
   name: string;
@@ -24,6 +25,15 @@ export type AdminProductResponse = {
   publishedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  store: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+    logo: string | null;
+    website: string | null;
+  } | null;
+
   category: {
     id: string;
     name: string;
@@ -53,9 +63,15 @@ export type ProductPublicationResult = {
   changedCount: number;
 };
 
-
 export type ProductArchiveResult = {
   archived: boolean;
+  productIds: string[];
+  selectedCount: number;
+  changedCount: number;
+};
+
+export type ProductStoreAssignmentResult = {
+  storeId: string;
   productIds: string[];
   selectedCount: number;
   changedCount: number;
