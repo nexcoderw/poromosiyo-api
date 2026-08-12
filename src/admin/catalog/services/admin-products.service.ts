@@ -524,101 +524,68 @@ export class AdminProductsService {
     }
   }
 
-
   async remove(
     id: string,
     actorId: string,
     metadata: SessionMetadata,
   ): Promise<void> {
-    const product =
-      await this.prisma
-        .product
-        .findUnique({
-          where: {
-            id,
-          },
+    const product = await this.prisma.product.findUnique({
+      where: {
+        id,
+      },
 
+      select: {
+        id: true,
+        name: true,
+        status: true,
+
+        images: {
           select: {
-            id: true,
-            name: true,
-            status: true,
-
-            images: {
-              select: {
-                url: true,
-              },
-            },
+            url: true,
           },
-        });
+        },
+      },
+    });
 
     if (!product) {
-      throw new NotFoundException(
-        'Product not found.',
-      );
+      throw new NotFoundException('Product not found.');
     }
 
-    if (
-      product.status !==
-      'DRAFT'
-    ) {
+    if (product.status !== 'DRAFT') {
       throw new ConflictException(
         'Only draft products can be permanently deleted. Archive published products instead.',
       );
     }
 
-    await this.prisma
-      .$transaction(
-        async (
-          transaction,
-        ) => {
-          await transaction
-            .product
-            .delete({
-              where: {
-                id,
-              },
-            });
-
-          await transaction
-            .userActivity
-            .create({
-              data:
-                createCatalogActivityData({
-                  actorId,
-
-                  action:
-                    CATALOG_ACTIVITY_ACTION
-                      .PRODUCT_DELETED,
-
-                  resourceType:
-                    CATALOG_RESOURCE_TYPE
-                      .PRODUCT,
-
-                  resourceId:
-                    id,
-
-                  description:
-                    `Deleted product: ${product.name}`,
-
-                  metadata,
-                }),
-            });
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.product.delete({
+        where: {
+          id,
         },
-      );
+      });
 
-    await this.imageStorage
-      .deleteManyQuietly(
-        product.images.map(
-          (
-            image,
-          ) =>
-            image.url,
-        ),
-      );
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
 
-    this.logger.log(
-      `catalog.product.deleted actor=${actorId} product=${id}`,
+          action: CATALOG_ACTIVITY_ACTION.PRODUCT_DELETED,
+
+          resourceType: CATALOG_RESOURCE_TYPE.PRODUCT,
+
+          resourceId: id,
+
+          description: `Deleted product: ${product.name}`,
+
+          metadata,
+        }),
+      });
+    });
+
+    await this.imageStorage.deleteManyQuietly(
+      product.images.map((image) => image.url),
     );
+
+    this.logger.log(`catalog.product.deleted actor=${actorId} product=${id}`);
   }
 
   private async assertStoreExists(id: string): Promise<{
@@ -787,7 +754,7 @@ export class AdminProductsService {
 function serializeProduct(product: {
   id: string;
   categoryId: string;
-  storeId: string | null;
+  storeId: string;
   brandId: string | null;
   name: string;
   slug: string;
@@ -813,7 +780,7 @@ function serializeProduct(product: {
     isActive: boolean;
     logo: string | null;
     website: string | null;
-  } | null;
+  };
   category: {
     id: string;
     name: string;
