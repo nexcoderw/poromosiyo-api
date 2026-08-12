@@ -2,6 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { PrismaService } from '@poromosiyo/db';
 import request from 'supertest';
+import type { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PasswordHasherService } from '../src/auth/services/password-hasher.service';
@@ -9,7 +10,7 @@ import type { AuthenticationResult } from '../src/auth/types/auth.types';
 import { configureApplication } from '../src/bootstrap/configure-application';
 
 describe('Poromosiyo admin stores (e2e)', () => {
-  let app: INestApplication;
+  let app: INestApplication<App>;
   let prisma: PrismaService;
 
   const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -30,7 +31,7 @@ describe('Poromosiyo admin stores (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<INestApplication<App>>();
     configureApplication(app);
     await app.init();
 
