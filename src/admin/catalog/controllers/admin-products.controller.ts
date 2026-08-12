@@ -13,34 +13,68 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type { Request } from 'express';
+import type {
+  Request,
+} from 'express';
 
-import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
-import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
-import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
-import { getSessionMetadata } from '../../../auth/request-metadata';
-import type { AuthPrincipal } from '../../../auth/types/auth.types';
-import { ProductPublicationDto } from '../dto/product-publication.dto';
+import {
+  CurrentUser,
+} from '../../../auth/decorators/current-user.decorator';
+import {
+  RequireAuthRoles,
+} from '../../../auth/decorators/require-auth-roles.decorator';
+import {
+  AuthRoleGuard,
+} from '../../../auth/guards/auth-role.guard';
+import {
+  JwtAuthGuard,
+} from '../../../auth/guards/jwt-auth.guard';
+import {
+  getSessionMetadata,
+} from '../../../auth/request-metadata';
+import type {
+  AuthPrincipal,
+} from '../../../auth/types/auth.types';
+import {
+  ProductArchiveDto,
+} from '../dto/product-archive.dto';
+import {
+  ProductPublicationDto,
+} from '../dto/product-publication.dto';
 import {
   CreateProductDto,
   ListProductsDto,
   UpdateProductDto,
 } from '../dto/product.dto';
-import { AdminProductPublicationService } from '../services/admin-product-publication.service';
-import { AdminProductsService } from '../services/admin-products.service';
+import {
+  AdminProductArchiveService,
+} from '../services/admin-product-archive.service';
+import {
+  AdminProductPublicationService,
+} from '../services/admin-product-publication.service';
+import {
+  AdminProductsService,
+} from '../services/admin-products.service';
 
 @Controller({
   path: 'admin/products',
   version: '1',
 })
 @RequireAuthRoles('ADMIN')
-@UseGuards(JwtAuthGuard, AuthRoleGuard)
+@UseGuards(
+  JwtAuthGuard,
+  AuthRoleGuard,
+)
 export class AdminProductsController {
   constructor(
-    private readonly products: AdminProductsService,
+    private readonly products:
+      AdminProductsService,
 
-    private readonly publication: AdminProductPublicationService,
+    private readonly publication:
+      AdminProductPublicationService,
+
+    private readonly archive:
+      AdminProductArchiveService,
   ) {}
 
   @Get()
@@ -48,7 +82,9 @@ export class AdminProductsController {
     @Query()
     query: ListProductsDto,
   ) {
-    return this.products.list(query);
+    return this.products.list(
+      query,
+    );
   }
 
   @Patch('publication')
@@ -62,11 +98,35 @@ export class AdminProductsController {
     @Req()
     request: Request,
   ) {
-    return this.publication.setPublication(
-      dto,
-      admin.id,
-      getSessionMetadata(request),
-    );
+    return this.publication
+      .setPublication(
+        dto,
+        admin.id,
+        getSessionMetadata(
+          request,
+        ),
+      );
+  }
+
+  @Patch('archive')
+  setArchived(
+    @Body()
+    dto: ProductArchiveDto,
+
+    @CurrentUser()
+    admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
+  ) {
+    return this.archive
+      .setArchived(
+        dto,
+        admin.id,
+        getSessionMetadata(
+          request,
+        ),
+      );
   }
 
   @Get(':id')
@@ -79,7 +139,9 @@ export class AdminProductsController {
     )
     id: string,
   ) {
-    return this.products.get(id);
+    return this.products.get(
+      id,
+    );
   }
 
   @Post()
@@ -89,8 +151,17 @@ export class AdminProductsController {
 
     @CurrentUser()
     admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
   ) {
-    return this.products.create(dto, admin.id);
+    return this.products.create(
+      dto,
+      admin.id,
+      getSessionMetadata(
+        request,
+      ),
+    );
   }
 
   @Patch(':id')
@@ -108,12 +179,24 @@ export class AdminProductsController {
 
     @CurrentUser()
     admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
   ) {
-    return this.products.update(id, dto, admin.id);
+    return this.products.update(
+      id,
+      dto,
+      admin.id,
+      getSessionMetadata(
+        request,
+      ),
+    );
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(
+    HttpStatus.NO_CONTENT,
+  )
   async remove(
     @Param(
       'id',
@@ -125,7 +208,16 @@ export class AdminProductsController {
 
     @CurrentUser()
     admin: AuthPrincipal,
+
+    @Req()
+    request: Request,
   ): Promise<void> {
-    await this.products.remove(id, admin.id);
+    await this.products.remove(
+      id,
+      admin.id,
+      getSessionMetadata(
+        request,
+      ),
+    );
   }
 }
