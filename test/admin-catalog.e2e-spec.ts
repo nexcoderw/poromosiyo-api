@@ -30,6 +30,8 @@ describe('Poromosiyo admin catalog (e2e)', () => {
 
   const brandSlug = `catalog-brand-${suffix}`;
 
+  const storeSlug = `catalog-store-${suffix}`;
+
   const sku = `M13-${suffix}`.replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 64);
 
   let adminAuth: AuthenticationResult;
@@ -41,6 +43,8 @@ describe('Poromosiyo admin catalog (e2e)', () => {
   let childCategoryId = '';
 
   let brandId = '';
+
+  let storeId = '';
 
   let productId = '';
 
@@ -94,6 +98,15 @@ describe('Poromosiyo admin catalog (e2e)', () => {
       .expect(201);
 
     customerAuth = parseAuth(customerRegister.text);
+
+    const store = await prisma.store.create({
+      data: {
+        name: 'Catalog Store',
+        slug: storeSlug,
+      },
+    });
+
+    storeId = store.id;
   });
 
   afterAll(async () => {
@@ -162,6 +175,7 @@ describe('Poromosiyo admin catalog (e2e)', () => {
       .post('/api/v1/admin/products')
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
       .send({
+        storeId,
         categoryId: childCategoryId,
         brandId,
         name: 'Invalid Full Price Product',
@@ -178,6 +192,7 @@ describe('Poromosiyo admin catalog (e2e)', () => {
       .post('/api/v1/admin/products')
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
       .send({
+        storeId,
         categoryId: childCategoryId,
         brandId,
         name: 'Discounted Catalog Product',
@@ -323,6 +338,12 @@ describe('Poromosiyo admin catalog (e2e)', () => {
         slug: {
           contains: suffix,
         },
+      },
+    });
+
+    await prisma.store.deleteMany({
+      where: {
+        slug: storeSlug,
       },
     });
 
