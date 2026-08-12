@@ -101,6 +101,7 @@ describe('Poromosiyo admin stores (e2e)', () => {
         sku: normalizeSku(`M19-MISSING-${suffix}`),
         originalPrice: '10000',
         sellingPrice: '8000',
+        expiresAt: futureExpiration(),
       })
       .expect(400);
   });
@@ -117,6 +118,7 @@ describe('Poromosiyo admin stores (e2e)', () => {
         description: 'A product from the primary store.',
         originalPrice: '10000',
         sellingPrice: '8000',
+        expiresAt: futureExpiration(),
       })
       .expect(201);
 
@@ -174,6 +176,10 @@ describe('Poromosiyo admin stores (e2e)', () => {
 
 function normalizeSku(value: string): string {
   return value.replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 64);
+}
+
+function futureExpiration(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function parseObject(text: string): Record<string, unknown> {
