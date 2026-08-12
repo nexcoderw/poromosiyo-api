@@ -1,257 +1,132 @@
 import 'dotenv/config';
 
-import {
-  Storage,
-} from '@google-cloud/storage';
-import {
-  randomUUID,
-} from 'node:crypto';
+import { Storage } from '@google-cloud/storage';
+import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 
-import {
-  IMAGE_CACHE_CONTROL,
-} from '../storage/image-storage.constants';
+import { IMAGE_CACHE_CONTROL } from '../storage/image-storage.constants';
 
-async function main():
-  Promise<void> {
-  const bucketName =
-    required(
-      'GCS_IMAGE_BUCKET',
-    );
+async function main(): Promise<void> {
+  const bucketName = required('GCS_IMAGE_BUCKET');
 
-  const publicBaseUrl =
-    (
-      process.env
-        .GCS_IMAGE_PUBLIC_BASE_URL ??
-      ''
-    )
-      .trim()
-      .replace(
-        /\/+$/,
-        '',
-      );
+  const publicBaseUrl = (process.env.GCS_IMAGE_PUBLIC_BASE_URL ?? '')
+    .trim()
+    .replace(/\/+$/, '');
 
-  const storage =
-    new Storage();
+  const storage = new Storage();
 
-  const bucket =
-    storage.bucket(
-      bucketName,
-    );
+  const bucket = storage.bucket(bucketName);
 
-  const objectPath =
-    `health/public-media-${Date.now()}-${randomUUID()}.webp`;
+  const objectPath = `health/public-media-${Date.now()}-${randomUUID()}.webp`;
 
-  const image =
-    await sharp({
-      create: {
-        width:
-          16,
+  const image = await sharp({
+    create: {
+      width: 16,
 
-        height:
-          16,
+      height: 16,
 
-        channels:
-          3,
+      channels: 3,
 
-        background: {
-          r:
-            128,
+      background: {
+        r: 128,
 
-          g:
-            128,
+        g: 128,
 
-          b:
-            128,
-        },
+        b: 128,
       },
+    },
+  })
+    .webp({
+      quality: 70,
     })
-      .webp({
-        quality:
-          70,
-      })
-      .toBuffer();
+    .toBuffer();
 
   try {
-    await bucket
-      .file(
-        objectPath,
-      )
-      .save(
-        image,
-        {
-          contentType:
-            'image/webp',
+    await bucket.file(objectPath).save(image, {
+      contentType: 'image/webp',
 
-          resumable:
-            false,
+      resumable: false,
 
-          validation:
-            'crc32c',
+      validation: 'crc32c',
 
-          metadata: {
-            cacheControl:
-              IMAGE_CACHE_CONTROL,
+      metadata: {
+        cacheControl: IMAGE_CACHE_CONTROL,
 
-            contentDisposition:
-              'inline',
-          },
-        },
-      );
+        contentDisposition: 'inline',
+      },
+    });
 
-    const url =
-      publicUrl(
-        bucketName,
-        objectPath,
-        publicBaseUrl,
-      );
+    const url = publicUrl(bucketName, objectPath, publicBaseUrl);
 
-    const response =
-      await fetch(
-        url,
-        {
-          method:
-            'GET',
+    const response = await fetch(url, {
+      method: 'GET',
 
-          cache:
-            'no-store',
+      cache: 'no-store',
 
-          signal:
-            AbortSignal.timeout(
-              15_000,
-            ),
-        },
-      );
+      signal: AbortSignal.timeout(15_000),
+    });
 
     if (!response.ok) {
-      throw new Error(
-        `Public GET returned HTTP ${response.status}.`,
-      );
+      throw new Error(`Public GET returned HTTP ${response.status}.`);
     }
 
-    const contentType =
-      response.headers.get(
-        'content-type',
-      );
+    const contentType = response.headers.get('content-type');
 
-    if (
-      !contentType
-        ?.includes(
-          'image/webp',
-        )
-    ) {
-      throw new Error(
-        `Unexpected Content-Type: ${contentType}`,
-      );
+    if (!contentType?.includes('image/webp')) {
+      throw new Error(`Unexpected Content-Type: ${contentType}`);
     }
 
-    const cacheControl =
-      response.headers.get(
-        'cache-control',
-      ) ?? '';
+    const cacheControl = response.headers.get('cache-control') ?? '';
 
-    if (
-      !cacheControl.includes(
-        'max-age=31536000',
-      )
-    ) {
-      throw new Error(
-        `Long-lived public caching is missing: ${cacheControl}`,
-      );
+    if (!cacheControl.includes('max-age=31536000')) {
+      throw new Error(`Long-lived public caching is missing: ${cacheControl}`);
     }
 
-    console.log(
-      'Public Google Cloud Storage image verification successful.',
-    );
+    console.log('Public Google Cloud Storage image verification successful.');
 
-    console.log(
-      `Public URL: ${url}`,
-    );
+    console.log(`Public URL: ${url}`);
 
-    console.log(
-      `Cache-Control: ${cacheControl}`,
-    );
+    console.log(`Cache-Control: ${cacheControl}`);
   } finally {
-    await bucket
-      .file(
-        objectPath,
-      )
-      .delete({
-        ignoreNotFound:
-          true,
-      });
+    await bucket.file(objectPath).delete({
+      ignoreNotFound: true,
+    });
   }
 }
 
-function required(
-  name: string,
-): string {
-  const value =
-    process.env[name]
-      ?.trim();
+function required(name: string): string {
+  const value = process.env[name]?.trim();
 
   if (!value) {
-    throw new Error(
-      `${name} is required.`,
-    );
+    throw new Error(`${name} is required.`);
   }
 
   return value;
 }
 
 function publicUrl(
-  bucketName:
-    string,
-  objectPath:
-    string,
-  baseUrl:
-    string,
+  bucketName: string,
+  objectPath: string,
+  baseUrl: string,
 ): string {
-  const path =
-    objectPath
-      .split('/')
-      .map(
-        (
-          part,
-        ) =>
-          encodeURIComponent(
-            part,
-          ),
-      )
-      .join('/');
+  const path = objectPath
+    .split('/')
+    .map((part) => encodeURIComponent(part))
+    .join('/');
 
   if (baseUrl) {
-    return (
-      `${baseUrl}/${path}`
-    );
+    return `${baseUrl}/${path}`;
   }
 
-  return (
-    `https://storage.googleapis.com/${encodeURIComponent(
-      bucketName,
-    )}/${path}`
-  );
+  return `https://storage.googleapis.com/${encodeURIComponent(
+    bucketName,
+  )}/${path}`;
 }
 
-main().catch(
-  (
-    error:
-      unknown,
-  ) => {
-    console.error(
-      'Public GCS image verification failed.',
-    );
+main().catch((error: unknown) => {
+  console.error('Public GCS image verification failed.');
 
-    console.error(
-      error instanceof
-        Error
-        ? error.message
-        : String(
-            error,
-          ),
-    );
+  console.error(error instanceof Error ? error.message : String(error));
 
-    process.exitCode =
-      1;
-  },
-);
+  process.exitCode = 1;
+});
