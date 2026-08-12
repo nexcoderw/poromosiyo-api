@@ -29,3 +29,12 @@ export const MONEY_PATTERN = /^(?:0|[1-9]\d{0,9})(?:\.\d{1,2})?$/;
 export const PRODUCT_STATUSES = ['DRAFT', 'ACTIVE', 'ARCHIVED'] as const;
 
 export type CatalogProductStatus = (typeof PRODUCT_STATUSES)[number];
+
+export const PRODUCT_EXPIRATION_STATUSES = [
+  'VALID',
+  'EXPIRED',
+  'EXPIRING_SOON',
+] as const;
+
+export type CatalogProductExpirationStatus =
+  (typeof PRODUCT_EXPIRATION_STATUSES)[number];
