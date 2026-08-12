@@ -28,6 +28,9 @@ import { CatalogPaginationDto } from './catalog-pagination.dto';
 
 export class CreateProductDto {
   @IsUUID('4')
+  storeId!: string;
+
+  @IsUUID('4')
   categoryId!: string;
 
   @IsOptional()
@@ -79,6 +82,10 @@ export class CreateProductDto {
 }
 
 export class UpdateProductDto {
+  @IsOptional()
+  @IsUUID('4')
+  storeId?: string;
+
   @IsOptional()
   @IsUUID('4')
   categoryId?: string;
@@ -139,6 +146,10 @@ export class UpdateProductDto {
 }
 
 export class ListProductsDto extends CatalogPaginationDto {
+  @IsOptional()
+  @IsUUID('4')
+  storeId?: string;
+
   @IsOptional()
   @IsIn(PRODUCT_STATUSES)
   status?: CatalogProductStatus;
