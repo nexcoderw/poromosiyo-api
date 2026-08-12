@@ -37,107 +37,69 @@ export class AdminCategoriesService {
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    const category =
-      await this.prisma
-        .category
-        .findUnique({
-          where: {
-            id,
-          },
+    const category = await this.prisma.category.findUnique({
+      where: {
+        id,
+      },
 
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            image: true,
-          },
-        });
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        image: true,
+      },
+    });
 
     if (!category) {
-      throw new NotFoundException(
-        'Category not found.',
-      );
+      throw new NotFoundException('Category not found.');
     }
 
-    const uploaded =
-      await this.imageStorage
-        .store({
-          file,
-          owner:
-            'categories',
-          ownerId:
-            category.id,
-          slug:
-            category.slug ||
-            category.name,
-        });
+    const uploaded = await this.imageStorage.store({
+      file,
+      owner: 'categories',
+      ownerId: category.id,
+      slug: category.slug || category.name,
+    });
 
     let updated;
 
     try {
-      updated =
-        await this.prisma
-          .$transaction(
-            async (
-              transaction,
-            ) => {
-              const result =
-                await transaction
-                  .category
-                  .update({
-                    where: {
-                      id,
-                    },
+      updated = await this.prisma.$transaction(async (transaction) => {
+        const result = await transaction.category.update({
+          where: {
+            id,
+          },
 
-                    data: {
-                      image:
-                        uploaded,
-                    },
-                  });
+          data: {
+            image: uploaded,
+          },
+        });
 
-              await transaction
-                .userActivity
-                .create({
-                  data:
-                    createCatalogActivityData({
-                      actorId,
+        await transaction.userActivity.create({
+          data: createCatalogActivityData({
+            actorId,
 
-                      action:
-                        CATALOG_ACTIVITY_ACTION
-                          .CATEGORY_IMAGE_UPDATED,
+            action: CATALOG_ACTIVITY_ACTION.CATEGORY_IMAGE_UPDATED,
 
-                      resourceType:
-                        CATALOG_RESOURCE_TYPE
-                          .CATEGORY,
+            resourceType: CATALOG_RESOURCE_TYPE.CATEGORY,
 
-                      resourceId:
-                        category.id,
+            resourceId: category.id,
 
-                      description:
-                        `Updated category image: ${category.name}`,
+            description: `Updated category image: ${category.name}`,
 
-                      metadata,
-                    }),
-                });
+            metadata,
+          }),
+        });
 
-              return result;
-            },
-          );
-    } catch (
-      error: unknown
-    ) {
-      await this.imageStorage
-        .deleteQuietly(
-          uploaded,
-        );
+        return result;
+      });
+    } catch (error: unknown) {
+      await this.imageStorage.deleteQuietly(uploaded);
 
       throw error;
     }
 
-    await this.imageStorage
-      .deleteQuietly(
-        category.image,
-      );
+    await this.imageStorage.deleteQuietly(category.image);
 
     return updated;
   }
@@ -147,80 +109,55 @@ export class AdminCategoriesService {
     actorId: string,
     metadata: SessionMetadata,
   ): Promise<void> {
-    const category =
-      await this.prisma
-        .category
-        .findUnique({
-          where: {
-            id,
-          },
+    const category = await this.prisma.category.findUnique({
+      where: {
+        id,
+      },
 
-          select: {
-            id: true,
-            name: true,
-            image: true,
-          },
-        });
+      select: {
+        id: true,
+        name: true,
+        image: true,
+      },
+    });
 
     if (!category) {
-      throw new NotFoundException(
-        'Category not found.',
-      );
+      throw new NotFoundException('Category not found.');
     }
 
     if (!category.image) {
       return;
     }
 
-    await this.prisma
-      .$transaction(
-        async (
-          transaction,
-        ) => {
-          await transaction
-            .category
-            .update({
-              where: {
-                id,
-              },
-
-              data: {
-                image:
-                  null,
-              },
-            });
-
-          await transaction
-            .userActivity
-            .create({
-              data:
-                createCatalogActivityData({
-                  actorId,
-
-                  action:
-                    CATALOG_ACTIVITY_ACTION
-                      .CATEGORY_IMAGE_REMOVED,
-
-                  resourceType:
-                    CATALOG_RESOURCE_TYPE
-                      .CATEGORY,
-
-                  resourceId:
-                    id,
-
-                  description:
-                    `Removed category image: ${category.name}`,
-
-                  metadata,
-                }),
-            });
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.category.update({
+        where: {
+          id,
         },
-      );
 
-    await this.imageStorage
-      .deleteQuietly(
-        category.image,
-      );
+        data: {
+          image: null,
+        },
+      });
+
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
+
+          action: CATALOG_ACTIVITY_ACTION.CATEGORY_IMAGE_REMOVED,
+
+          resourceType: CATALOG_RESOURCE_TYPE.CATEGORY,
+
+          resourceId: id,
+
+          description: `Removed category image: ${category.name}`,
+
+          metadata,
+        }),
+      });
+    });
+
+    await this.imageStorage.deleteQuietly(category.image);
   }
 
   async list(query: ListCategoriesDto): Promise<PaginatedResult<unknown>> {
@@ -377,7 +314,6 @@ export class AdminCategoriesService {
 
             description: normalizeNullableText(dto.description),
 
-
             isActive: dto.isActive ?? true,
 
             sortOrder: dto.sortOrder ?? 0,
@@ -480,7 +416,6 @@ export class AdminCategoriesService {
                 ? undefined
                 : normalizeNullableText(dto.description),
 
-
             isActive: dto.isActive,
 
             sortOrder: dto.sortOrder,
@@ -582,10 +517,7 @@ export class AdminCategoriesService {
         });
       });
 
-      await this.imageStorage
-        .deleteQuietly(
-          category.image,
-        );
+      await this.imageStorage.deleteQuietly(category.image);
 
       this.logger.log(
         `catalog.category.deleted actor=${actorId} category=${id}`,
