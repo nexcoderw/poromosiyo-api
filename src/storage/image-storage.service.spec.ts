@@ -12,7 +12,7 @@ describe('ImageStorageService', () => {
     }),
   );
 
-  it('returns an organized WebP object path instead of image data', async () => {
+  it('returns a public URL for an organized WebP object', async () => {
     const buffer = await sharp({
       create: {
         width: 2000,
@@ -24,17 +24,17 @@ describe('ImageStorageService', () => {
       .jpeg()
       .toBuffer();
 
-    const path = await service.store({
+    const url = await service.store({
       file: upload(buffer, 'phone-photo.jpg', 'image/jpeg'),
       owner: 'products',
       ownerId: '4fa-product-id',
       slug: 'Summer Product',
     });
 
-    expect(path).toMatch(
-      /^products\/4fa-product-id\/summer-product-\d+-[0-9a-f-]+\.webp$/,
+    expect(url).toMatch(
+      /^https:\/\/storage\.googleapis\.com\/poromosiyo-images\/products\/4fa-product-id\/summer-product-\d+-[0-9a-f-]+\.webp$/,
     );
-    expect(path).not.toContain('base64');
+    expect(url).not.toContain('base64');
   });
 
   it('rejects content that is not an image', async () => {
