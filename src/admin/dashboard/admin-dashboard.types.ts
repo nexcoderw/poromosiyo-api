@@ -17,6 +17,8 @@ export type AdminDashboardResponse = {
     total: number;
     draft: number;
     published: number;
+    expired: number;
+    expiringSoon: number;
     archived: number;
   };
 
