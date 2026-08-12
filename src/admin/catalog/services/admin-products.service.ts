@@ -1,3 +1,6 @@
+import { createCatalogActivityData } from '../utils/catalog-activity.util';
+import { CATALOG_ACTIVITY_ACTION, CATALOG_RESOURCE_TYPE } from '../catalog-activity.constants';
+import type { SessionMetadata } from '../../../auth/types/auth.types';
 import {
   ConflictException,
   Injectable,
@@ -178,218 +181,524 @@ export class AdminProductsService {
     return serializeProduct(product);
   }
 
+
   async create(
     dto: CreateProductDto,
     actorId: string,
+    metadata: SessionMetadata,
   ): Promise<AdminProductResponse> {
-    await this.assertCategoryExists(dto.categoryId);
+    await this.assertCategoryExists(
+      dto.categoryId,
+    );
 
     if (dto.brandId) {
-      await this.assertBrandExists(dto.brandId);
+      await this.assertBrandExists(
+        dto.brandId,
+      );
     }
 
-    const originalPrice = normalizeMoney(dto.originalPrice);
+    const originalPrice =
+      normalizeMoney(
+        dto.originalPrice,
+      );
 
-    const sellingPrice = normalizeMoney(dto.sellingPrice);
+    const sellingPrice =
+      normalizeMoney(
+        dto.sellingPrice,
+      );
 
-    assertDiscountedPrice(originalPrice, sellingPrice);
+    assertDiscountedPrice(
+      originalPrice,
+      sellingPrice,
+    );
 
-    const slug = await this.resolveUniqueSlug(dto.slug ?? dto.name, null);
+    const slug =
+      await this.resolveUniqueSlug(
+        dto.slug ?? dto.name,
+        null,
+      );
 
-    const sku = normalizeSku(dto.sku);
+    const sku =
+      normalizeSku(
+        dto.sku,
+      );
 
     try {
-      const product = await this.prisma.product.create({
-        data: {
-          categoryId: dto.categoryId,
-          brandId: dto.brandId ?? null,
-          name: dto.name.trim(),
-          slug,
-          sku,
-          shortDescription: normalizeNullableText(dto.shortDescription),
-          description: normalizeNullableText(dto.description),
-          currency: normalizeCurrency(dto.currency ?? 'RWF'),
-          originalPrice,
-          sellingPrice,
-          status: 'DRAFT',
-          isFeatured: dto.isFeatured ?? false,
-        },
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
+      const product =
+        await this.prisma
+          .$transaction(
+            async (
+              transaction,
+            ) => {
+              const created =
+                await transaction
+                  .product
+                  .create({
+                    data: {
+                      categoryId:
+                        dto.categoryId,
+
+                      brandId:
+                        dto.brandId ??
+                        null,
+
+                      name:
+                        dto.name.trim(),
+
+                      slug,
+
+                      sku,
+
+                      shortDescription:
+                        normalizeNullableText(
+                          dto.shortDescription,
+                        ),
+
+                      description:
+                        normalizeNullableText(
+                          dto.description,
+                        ),
+
+                      currency:
+                        normalizeCurrency(
+                          dto.currency ??
+                            'RWF',
+                        ),
+
+                      originalPrice,
+
+                      sellingPrice,
+
+                      status:
+                        'DRAFT',
+
+                      isFeatured:
+                        dto.isFeatured ??
+                        false,
+                    },
+
+                    include: {
+                      category: {
+                        select: {
+                          id: true,
+                          name: true,
+                          slug: true,
+                          isActive:
+                            true,
+                        },
+                      },
+
+                      brand: {
+                        select: {
+                          id: true,
+                          name: true,
+                          slug: true,
+                          isActive:
+                            true,
+                        },
+                      },
+
+                      images: {
+                        orderBy: {
+                          sortOrder:
+                            'asc',
+                        },
+                      },
+                    },
+                  });
+
+              await transaction
+                .userActivity
+                .create({
+                  data:
+                    createCatalogActivityData({
+                      actorId,
+
+                      action:
+                        CATALOG_ACTIVITY_ACTION
+                          .PRODUCT_CREATED,
+
+                      resourceType:
+                        CATALOG_RESOURCE_TYPE
+                          .PRODUCT,
+
+                      resourceId:
+                        created.id,
+
+                      description:
+                        `Created product: ${created.name}`,
+
+                      metadata,
+                    }),
+                });
+
+              return created;
             },
-          },
-          brand: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
-            },
-          },
-          images: {
-            orderBy: {
-              sortOrder: 'asc',
-            },
-          },
-        },
-      });
+          );
 
       this.logger.log(
         `catalog.product.created actor=${actorId} product=${product.id}`,
       );
 
-      return serializeProduct(product);
-    } catch (error: unknown) {
-      if (isPrismaErrorCode(error, 'P2002')) {
-        throw new ConflictException('Product slug or SKU already exists.');
+      return serializeProduct(
+        product,
+      );
+    } catch (
+      error: unknown
+    ) {
+      if (
+        isPrismaErrorCode(
+          error,
+          'P2002',
+        )
+      ) {
+        throw new ConflictException(
+          'Product slug or SKU already exists.',
+        );
       }
 
       throw error;
     }
   }
+
 
   async update(
     id: string,
     dto: UpdateProductDto,
     actorId: string,
+    metadata: SessionMetadata,
   ): Promise<AdminProductResponse> {
-    const existing = await this.prisma.product.findUnique({
-      where: {
-        id,
-      },
-    });
+    const existing =
+      await this.prisma
+        .product
+        .findUnique({
+          where: {
+            id,
+          },
+        });
 
     if (!existing) {
-      throw new NotFoundException('Product not found.');
+      throw new NotFoundException(
+        'Product not found.',
+      );
     }
 
-    const categoryId = dto.categoryId ?? existing.categoryId;
+    const categoryId =
+      dto.categoryId ??
+      existing.categoryId;
 
-    const brandId = dto.brandId === undefined ? existing.brandId : dto.brandId;
+    const brandId =
+      dto.brandId ===
+        undefined
+        ? existing.brandId
+        : dto.brandId;
 
-    await this.assertCategoryExists(categoryId);
+    await this.assertCategoryExists(
+      categoryId,
+    );
 
     if (brandId) {
-      await this.assertBrandExists(brandId);
+      await this.assertBrandExists(
+        brandId,
+      );
     }
 
-    const originalPrice = normalizeMoney(
-      dto.originalPrice ?? existing.originalPrice.toString(),
+    const originalPrice =
+      normalizeMoney(
+        dto.originalPrice ??
+          existing.originalPrice
+            .toString(),
+      );
+
+    const sellingPrice =
+      normalizeMoney(
+        dto.sellingPrice ??
+          existing.sellingPrice
+            .toString(),
+      );
+
+    assertDiscountedPrice(
+      originalPrice,
+      sellingPrice,
     );
 
-    const sellingPrice = normalizeMoney(
-      dto.sellingPrice ?? existing.sellingPrice.toString(),
-    );
+    const effectiveDescription =
+      dto.description ===
+        undefined
+        ? existing.description
+        : normalizeNullableText(
+            dto.description,
+          );
 
-    assertDiscountedPrice(originalPrice, sellingPrice);
+    if (
+      existing.status ===
+      'ACTIVE'
+    ) {
+      await this.assertCanActivate(
+        id,
+        categoryId,
+        brandId,
+        effectiveDescription,
+      );
+    }
 
-    let slug: string | undefined;
+    let slug:
+      string | undefined;
 
-    if (dto.slug !== undefined) {
-      slug = await this.resolveUniqueSlug(dto.slug, id);
+    if (
+      dto.slug !==
+      undefined
+    ) {
+      slug =
+        await this.resolveUniqueSlug(
+          dto.slug,
+          id,
+        );
     }
 
     try {
-      const product = await this.prisma.product.update({
-        where: {
-          id,
-        },
-        data: {
-          categoryId: dto.categoryId,
-          brandId: dto.brandId,
-          name: dto.name?.trim(),
-          slug,
-          sku: dto.sku ? normalizeSku(dto.sku) : undefined,
-          shortDescription:
-            dto.shortDescription === undefined
-              ? undefined
-              : normalizeNullableText(dto.shortDescription),
-          description:
-            dto.description === undefined
-              ? undefined
-              : normalizeNullableText(dto.description),
-          currency: dto.currency ? normalizeCurrency(dto.currency) : undefined,
-          originalPrice:
-            dto.originalPrice === undefined ? undefined : originalPrice,
-          sellingPrice:
-            dto.sellingPrice === undefined ? undefined : sellingPrice,
-          isFeatured: dto.isFeatured,
-        },
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
-            },
-          },
-          brand: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-              isActive: true,
-            },
-          },
-          images: {
-            orderBy: [
-              {
-                sortOrder: 'asc',
-              },
-              {
-                createdAt: 'asc',
-              },
-            ],
-          },
-        },
-      });
+      const product =
+        await this.prisma
+          .$transaction(
+            async (
+              transaction,
+            ) => {
+              const updated =
+                await transaction
+                  .product
+                  .update({
+                    where: {
+                      id,
+                    },
 
-      this.logger.log(`catalog.product.updated actor=${actorId} product=${id}`);
+                    data: {
+                      categoryId:
+                        dto.categoryId,
 
-      return serializeProduct(product);
-    } catch (error: unknown) {
-      if (isPrismaErrorCode(error, 'P2002')) {
-        throw new ConflictException('Product slug or SKU already exists.');
+                      brandId:
+                        dto.brandId,
+
+                      name:
+                        dto.name
+                          ?.trim(),
+
+                      slug,
+
+                      sku:
+                        dto.sku
+                          ? normalizeSku(
+                              dto.sku,
+                            )
+                          : undefined,
+
+                      shortDescription:
+                        dto.shortDescription ===
+                          undefined
+                          ? undefined
+                          : normalizeNullableText(
+                              dto.shortDescription,
+                            ),
+
+                      description:
+                        dto.description ===
+                          undefined
+                          ? undefined
+                          : normalizeNullableText(
+                              dto.description,
+                            ),
+
+                      currency:
+                        dto.currency
+                          ? normalizeCurrency(
+                              dto.currency,
+                            )
+                          : undefined,
+
+                      originalPrice:
+                        dto.originalPrice ===
+                          undefined
+                          ? undefined
+                          : originalPrice,
+
+                      sellingPrice:
+                        dto.sellingPrice ===
+                          undefined
+                          ? undefined
+                          : sellingPrice,
+
+                      isFeatured:
+                        dto.isFeatured,
+                    },
+
+                    include: {
+                      category: {
+                        select: {
+                          id: true,
+                          name: true,
+                          slug: true,
+                          isActive:
+                            true,
+                        },
+                      },
+
+                      brand: {
+                        select: {
+                          id: true,
+                          name: true,
+                          slug: true,
+                          isActive:
+                            true,
+                        },
+                      },
+
+                      images: {
+                        orderBy: [
+                          {
+                            sortOrder:
+                              'asc',
+                          },
+                          {
+                            createdAt:
+                              'asc',
+                          },
+                        ],
+                      },
+                    },
+                  });
+
+              await transaction
+                .userActivity
+                .create({
+                  data:
+                    createCatalogActivityData({
+                      actorId,
+
+                      action:
+                        CATALOG_ACTIVITY_ACTION
+                          .PRODUCT_UPDATED,
+
+                      resourceType:
+                        CATALOG_RESOURCE_TYPE
+                          .PRODUCT,
+
+                      resourceId:
+                        updated.id,
+
+                      description:
+                        `Updated product: ${updated.name}`,
+
+                      metadata,
+                    }),
+                });
+
+              return updated;
+            },
+          );
+
+      this.logger.log(
+        `catalog.product.updated actor=${actorId} product=${id}`,
+      );
+
+      return serializeProduct(
+        product,
+      );
+    } catch (
+      error: unknown
+    ) {
+      if (
+        isPrismaErrorCode(
+          error,
+          'P2002',
+        )
+      ) {
+        throw new ConflictException(
+          'Product slug or SKU already exists.',
+        );
       }
 
       throw error;
     }
   }
 
-  async remove(id: string, actorId: string): Promise<void> {
-    const product = await this.prisma.product.findUnique({
-      where: {
-        id,
-      },
-      select: {
-        id: true,
-        status: true,
-      },
-    });
+
+  async remove(
+    id: string,
+    actorId: string,
+    metadata: SessionMetadata,
+  ): Promise<void> {
+    const product =
+      await this.prisma
+        .product
+        .findUnique({
+          where: {
+            id,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          },
+        });
 
     if (!product) {
-      throw new NotFoundException('Product not found.');
+      throw new NotFoundException(
+        'Product not found.',
+      );
     }
 
-    if (product.status !== 'DRAFT') {
+    if (
+      product.status !==
+      'DRAFT'
+    ) {
       throw new ConflictException(
         'Only draft products can be permanently deleted. Archive published products instead.',
       );
     }
 
-    await this.prisma.product.delete({
-      where: {
-        id,
-      },
-    });
+    await this.prisma
+      .$transaction(
+        async (
+          transaction,
+        ) => {
+          await transaction
+            .product
+            .delete({
+              where: {
+                id,
+              },
+            });
 
-    this.logger.log(`catalog.product.deleted actor=${actorId} product=${id}`);
+          await transaction
+            .userActivity
+            .create({
+              data:
+                createCatalogActivityData({
+                  actorId,
+
+                  action:
+                    CATALOG_ACTIVITY_ACTION
+                      .PRODUCT_DELETED,
+
+                  resourceType:
+                    CATALOG_RESOURCE_TYPE
+                      .PRODUCT,
+
+                  resourceId:
+                    id,
+
+                  description:
+                    `Deleted product: ${product.name}`,
+
+                  metadata,
+                }),
+            });
+        },
+      );
+
+    this.logger.log(
+      `catalog.product.deleted actor=${actorId} product=${id}`,
+    );
   }
 
   private async assertCategoryExists(id: string): Promise<void> {
