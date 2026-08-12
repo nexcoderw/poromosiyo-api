@@ -25,6 +25,11 @@ export type AdminDashboardResponse = {
     active: number;
   };
 
+  stores: {
+    total: number;
+    active: number;
+  };
+
   brands: {
     total: number;
     active: number;
@@ -42,20 +47,14 @@ export type AdminDashboardResponse = {
       id: string;
       fullName: string;
       email: string;
-      role:
-        | 'CUSTOMER'
-        | 'ADMIN'
-        | 'SUPERADMIN';
+      role: 'CUSTOMER' | 'ADMIN' | 'SUPERADMIN';
     } | null;
 
     subjectUser: {
       id: string;
       fullName: string;
       email: string;
-      role:
-        | 'CUSTOMER'
-        | 'ADMIN'
-        | 'SUPERADMIN';
+      role: 'CUSTOMER' | 'ADMIN' | 'SUPERADMIN';
     } | null;
   }>;
 };
