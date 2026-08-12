@@ -24,6 +24,7 @@ import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { getSessionMetadata } from '../../../auth/request-metadata';
 import type { AuthPrincipal } from '../../../auth/types/auth.types';
+import { ApiImageUpload } from '../../../storage/api-image-upload.decorator';
 import { IMAGE_UPLOAD_FIELD } from '../../../storage/image-storage.constants';
 import { imageUploadOptions } from '../../../storage/image-upload.options';
 import {
@@ -105,6 +106,7 @@ export class AdminCategoriesController {
   }
 
   @Patch(':id/image')
+  @ApiImageUpload()
   @UseInterceptors(FileInterceptor(IMAGE_UPLOAD_FIELD, imageUploadOptions))
   updateImage(
     @Param(
