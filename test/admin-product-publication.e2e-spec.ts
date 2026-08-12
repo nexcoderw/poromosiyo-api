@@ -26,11 +26,15 @@ describe('Poromosiyo admin product publication (e2e)', () => {
 
   const categorySlug = `publication-category-${suffix}`;
 
+  const storeSlug = `publication-store-${suffix}`;
+
   let adminAuth: AuthenticationResult;
 
   let customerAuth: AuthenticationResult;
 
   let categoryId = '';
+
+  let storeId = '';
 
   let firstProductId = '';
 
@@ -97,6 +101,15 @@ describe('Poromosiyo admin product publication (e2e)', () => {
       .expect(201);
 
     categoryId = requireString(parseObject(category.text).id);
+
+    const store = await prisma.store.create({
+      data: {
+        name: 'Publication Store',
+        slug: storeSlug,
+      },
+    });
+
+    storeId = store.id;
 
     const first = await createProduct(
       `M15-A-${suffix}`,
@@ -289,6 +302,7 @@ describe('Poromosiyo admin product publication (e2e)', () => {
       .post('/api/v1/admin/products')
       .set('Authorization', `Bearer ${adminAuth.accessToken}`)
       .send({
+        storeId,
         categoryId,
         name,
         sku: sku.replace(/[^A-Za-z0-9._-]/g, '-').slice(0, 64),
@@ -368,6 +382,12 @@ describe('Poromosiyo admin product publication (e2e)', () => {
     await prisma.category.deleteMany({
       where: {
         slug: categorySlug,
+      },
+    });
+
+    await prisma.store.deleteMany({
+      where: {
+        slug: storeSlug,
       },
     });
 
