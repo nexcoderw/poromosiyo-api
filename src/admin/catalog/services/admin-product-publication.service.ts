@@ -19,6 +19,7 @@ type PublicationCandidate = {
   name: string;
   status: string;
   description: string | null;
+  expiresAt: Date;
 
   store: {
     isActive: boolean;
@@ -68,6 +69,7 @@ export class AdminProductPublicationService {
           name: true,
           status: true,
           description: true,
+          expiresAt: true,
 
           store: {
             select: {
@@ -218,6 +220,12 @@ function assertPublicationReady(
 
     if (!product.description?.trim()) {
       reasons.push('Product description is required.');
+    }
+
+    if (!product.expiresAt) {
+      reasons.push('Product expiration date is required.');
+    } else if (product.expiresAt.getTime() <= Date.now()) {
+      reasons.push('Product expiration date must be in the future.');
     }
 
     if (!product.store) {
