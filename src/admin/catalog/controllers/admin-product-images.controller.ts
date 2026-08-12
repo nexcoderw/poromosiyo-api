@@ -22,6 +22,7 @@ import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
 import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { getSessionMetadata } from '../../../auth/request-metadata';
 import type { AuthPrincipal } from '../../../auth/types/auth.types';
+import { ApiImageUpload } from '../../../storage/api-image-upload.decorator';
 import {
   CreateProductImageDto,
   UpdateProductImageDto,
@@ -40,6 +41,19 @@ export class AdminProductImagesController {
   constructor(private readonly images: AdminProductImagesService) {}
 
   @Post()
+  @ApiImageUpload({
+    altText: {
+      type: 'string',
+      description: 'Accessible alternative text for the product image.',
+    },
+    sortOrder: {
+      type: 'integer',
+      minimum: 0,
+    },
+    isPrimary: {
+      type: 'boolean',
+    },
+  })
   @UseInterceptors(FileInterceptor(IMAGE_UPLOAD_FIELD, imageUploadOptions))
   create(
     @Param(
