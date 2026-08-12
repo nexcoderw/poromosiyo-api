@@ -155,42 +155,67 @@ export class PasswordRecoveryService {
     }
   }
 
+
   async resetPassword(
     rawToken: string,
     newPassword: string,
     confirmPassword: string,
     expectedRole: AuthRole,
   ): Promise<void> {
-    assertMatchingPasswords(newPassword, confirmPassword);
+    assertMatchingPasswords(
+      newPassword,
+      confirmPassword,
+    );
 
-    const tokenHash = this.tokenHasher.hashToken(rawToken);
+    const tokenHash =
+      this.tokenHasher
+        .hashToken(
+          rawToken,
+        );
 
-    const now = new Date();
+    const now =
+      new Date();
 
-    const token = await this.prisma.passwordResetToken.findUnique({
-      where: {
-        tokenHash,
-      },
-      include: {
-        user: true,
-      },
-    });
+    const token =
+      await this.prisma
+        .passwordResetToken
+        .findUnique({
+          where: {
+            tokenHash,
+          },
+
+          include: {
+            user:
+              true,
+          },
+        });
 
     if (
       !token ||
-      token.usedAt !== null ||
-      token.expiresAt.getTime() <= now.getTime() ||
-      !roleSatisfiesRequirement(token.user.role, expectedRole) ||
+      token.usedAt !==
+        null ||
+      token.expiresAt
+        .getTime() <=
+        now.getTime() ||
+      !roleSatisfiesRequirement(
+        token.user.role,
+        expectedRole,
+      ) ||
       !token.user.isActive
     ) {
       throwInvalidResetToken();
     }
 
-    if (token.user.passwordHash) {
-      const samePassword = await this.passwordHasher.verify(
-        token.user.passwordHash,
-        newPassword,
-      );
+    if (
+      token.user.passwordHash
+    ) {
+      const samePassword =
+        await this.passwordHasher
+          .verify(
+            token.user
+              .passwordHash,
+            newPassword,
+          );
 
       if (samePassword) {
         throw new BadRequestException(
@@ -199,90 +224,191 @@ export class PasswordRecoveryService {
       }
     }
 
-    const passwordHash = await this.passwordHasher.hash(newPassword);
+    const passwordHash =
+      await this.passwordHasher
+        .hash(
+          newPassword,
+        );
 
-    await this.prisma.$transaction(async (transaction) => {
-      const claim = await transaction.passwordResetToken.updateMany({
-        where: {
-          id: token.id,
-          usedAt: null,
-          expiresAt: {
-            gt: now,
-          },
-        },
-        data: {
-          usedAt: now,
-        },
-      });
+    await this.prisma
+      .$transaction(
+        async (
+          transaction,
+        ) => {
+          const claim =
+            await transaction
+              .passwordResetToken
+              .updateMany({
+                where: {
+                  id:
+                    token.id,
 
-      if (claim.count !== 1) {
-        throwInvalidResetToken();
-      }
+                  usedAt:
+                    null,
 
-      const sessions = await transaction.authSession.findMany({
-        where: {
-          userId: token.userId,
-          revokedAt: null,
-        },
-        select: {
-          id: true,
-        },
-      });
+                  expiresAt: {
+                    gt:
+                      now,
+                  },
+                },
 
-      const sessionIds = sessions.map((session) => session.id);
+                data: {
+                  usedAt:
+                    now,
+                },
+              });
 
-      await transaction.user.update({
-        where: {
-          id: token.userId,
-        },
-        data: {
-          passwordHash,
-          passwordChangedAt: now,
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-        },
-      });
+          if (
+            claim.count !==
+            1
+          ) {
+            throwInvalidResetToken();
+          }
 
-      await transaction.passwordResetToken.updateMany({
-        where: {
-          userId: token.userId,
-          usedAt: null,
-        },
-        data: {
-          usedAt: now,
-        },
-      });
+          const sessions =
+            await transaction
+              .authSession
+              .findMany({
+                where: {
+                  userId:
+                    token.userId,
 
-      await transaction.authSession.updateMany({
-        where: {
-          userId: token.userId,
-          revokedAt: null,
-        },
-        data: {
-          revokedAt: now,
-          revocationReason: 'password_reset',
-        },
-      });
+                  revokedAt:
+                    null,
+                },
 
-      if (sessionIds.length > 0) {
-        await transaction.refreshToken.updateMany({
-          where: {
-            sessionId: {
-              in: sessionIds,
-            },
-            revokedAt: null,
-          },
-          data: {
-            revokedAt: now,
-          },
-        });
-      }
-    });
+                select: {
+                  id:
+                    true,
+                },
+              });
 
-    await this.sendPasswordChangedBestEffort(
-      token.user.email,
-      token.user.fullName,
-    );
+          const sessionIds =
+            sessions.map(
+              (session) =>
+                session.id,
+            );
+
+          await transaction
+            .user
+            .update({
+              where: {
+                id:
+                  token.userId,
+              },
+
+              data: {
+                passwordHash,
+
+                passwordChangedAt:
+                  now,
+
+                failedLoginAttempts:
+                  0,
+
+                lockedUntil:
+                  null,
+              },
+            });
+
+          await transaction
+            .passwordResetToken
+            .updateMany({
+              where: {
+                userId:
+                  token.userId,
+
+                usedAt:
+                  null,
+              },
+
+              data: {
+                usedAt:
+                  now,
+              },
+            });
+
+          await transaction
+            .authSession
+            .updateMany({
+              where: {
+                userId:
+                  token.userId,
+
+                revokedAt:
+                  null,
+              },
+
+              data: {
+                revokedAt:
+                  now,
+
+                revocationReason:
+                  'password_reset',
+              },
+            });
+
+          if (
+            sessionIds.length >
+            0
+          ) {
+            await transaction
+              .refreshToken
+              .updateMany({
+                where: {
+                  sessionId: {
+                    in:
+                      sessionIds,
+                  },
+
+                  revokedAt:
+                    null,
+                },
+
+                data: {
+                  revokedAt:
+                    now,
+                },
+              });
+          }
+
+          await transaction
+            .userActivity
+            .create({
+              data: {
+                subjectUserId:
+                  token.userId,
+
+                actorUserId:
+                  token.userId,
+
+                action:
+                  'PASSWORD_RESET',
+
+                resourceType:
+                  'USER',
+
+                resourceId:
+                  token.userId,
+
+                description:
+                  'Reset account password.',
+
+                ipAddress:
+                  token.requesterIp,
+
+                userAgent:
+                  token.userAgent,
+              },
+            });
+        },
+      );
+
+    await this
+      .sendPasswordChangedBestEffort(
+        token.user.email,
+        token.user.fullName,
+      );
   }
 
   async changePassword(
