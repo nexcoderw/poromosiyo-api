@@ -1,5 +1,8 @@
 import { createCatalogActivityData } from '../utils/catalog-activity.util';
-import { CATALOG_ACTIVITY_ACTION, CATALOG_RESOURCE_TYPE } from '../catalog-activity.constants';
+import {
+  CATALOG_ACTIVITY_ACTION,
+  CATALOG_RESOURCE_TYPE,
+} from '../catalog-activity.constants';
 import type { SessionMetadata } from '../../../auth/types/auth.types';
 import {
   ConflictException,
@@ -20,108 +23,68 @@ export class AdminProductImagesService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-
   async create(
     productId: string,
     dto: CreateProductImageDto,
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    await this.assertProductExists(
-      productId,
-    );
+    await this.assertProductExists(productId);
 
-    const existingCount =
-      await this.prisma
-        .productImage
-        .count({
+    const existingCount = await this.prisma.productImage.count({
+      where: {
+        productId,
+      },
+    });
+
+    const shouldBePrimary = existingCount === 0 || dto.isPrimary === true;
+
+    const image = await this.prisma.$transaction(async (transaction) => {
+      if (shouldBePrimary) {
+        await transaction.productImage.updateMany({
           where: {
             productId,
+            isPrimary: true,
+          },
+
+          data: {
+            isPrimary: false,
           },
         });
+      }
 
-    const shouldBePrimary =
-      existingCount === 0 ||
-      dto.isPrimary ===
-        true;
+      const created = await transaction.productImage.create({
+        data: {
+          productId,
 
-    const image =
-      await this.prisma
-        .$transaction(
-          async (
-            transaction,
-          ) => {
-            if (
-              shouldBePrimary
-            ) {
-              await transaction
-                .productImage
-                .updateMany({
-                  where: {
-                    productId,
-                    isPrimary:
-                      true,
-                  },
+          url: dto.url,
 
-                  data: {
-                    isPrimary:
-                      false,
-                  },
-                });
-            }
+          altText: normalizeNullableText(dto.altText),
 
-            const created =
-              await transaction
-                .productImage
-                .create({
-                  data: {
-                    productId,
+          sortOrder: dto.sortOrder ?? existingCount,
 
-                    url:
-                      dto.url,
+          isPrimary: shouldBePrimary,
+        },
+      });
 
-                    altText:
-                      normalizeNullableText(
-                        dto.altText,
-                      ),
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
 
-                    sortOrder:
-                      dto.sortOrder ??
-                      existingCount,
+          action: CATALOG_ACTIVITY_ACTION.PRODUCT_IMAGE_CREATED,
 
-                    isPrimary:
-                      shouldBePrimary,
-                  },
-                });
+          resourceType: CATALOG_RESOURCE_TYPE.PRODUCT_IMAGE,
 
-            await transaction
-              .userActivity
-              .create({
-                data:
-                  createCatalogActivityData({
-                    actorId,
+          resourceId: created.id,
 
-                    action:
-                      CATALOG_ACTIVITY_ACTION
-                        .PRODUCT_IMAGE_CREATED,
+          description: `Created image for product ${productId}`,
 
-                    resourceType:
-                      CATALOG_RESOURCE_TYPE
-                        .PRODUCT_IMAGE,
+          metadata,
+        }),
+      });
 
-                    resourceId:
-                      created.id,
-
-                    description:
-                      `Created image for product ${productId}`,
-
-                    metadata,
-                  }),
-              });
-
-            return created;
-          },
-        );
+      return created;
+    });
 
     this.logger.log(
       `catalog.product_image.created actor=${actorId} product=${productId} image=${image.id}`,
@@ -130,7 +93,6 @@ export class AdminProductImagesService {
     return image;
   }
 
-
   async update(
     productId: string,
     imageId: string,
@@ -138,134 +100,92 @@ export class AdminProductImagesService {
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    const image =
-      await this.prisma
-        .productImage
-        .findFirst({
-          where: {
-            id:
-              imageId,
+    const image = await this.prisma.productImage.findFirst({
+      where: {
+        id: imageId,
 
-            productId,
-          },
+        productId,
+      },
 
-          include: {
-            product: {
-              select: {
-                status:
-                  true,
-              },
-            },
+      include: {
+        product: {
+          select: {
+            status: true,
           },
-        });
+        },
+      },
+    });
 
     if (!image) {
-      throw new NotFoundException(
-        'Product image not found.',
-      );
+      throw new NotFoundException('Product image not found.');
     }
 
     if (
-      dto.isPrimary ===
-        false &&
+      dto.isPrimary === false &&
       image.isPrimary &&
-      image.product.status ===
-        'ACTIVE'
+      image.product.status === 'ACTIVE'
     ) {
       throw new ConflictException(
         'An active product must retain a primary image.',
       );
     }
 
-    const updated =
-      await this.prisma
-        .$transaction(
-          async (
-            transaction,
-          ) => {
-            if (
-              dto.isPrimary ===
-              true
-            ) {
-              await transaction
-                .productImage
-                .updateMany({
-                  where: {
-                    productId,
+    const updated = await this.prisma.$transaction(async (transaction) => {
+      if (dto.isPrimary === true) {
+        await transaction.productImage.updateMany({
+          where: {
+            productId,
 
-                    id: {
-                      not:
-                        imageId,
-                    },
+            id: {
+              not: imageId,
+            },
 
-                    isPrimary:
-                      true,
-                  },
-
-                  data: {
-                    isPrimary:
-                      false,
-                  },
-                });
-            }
-
-            const result =
-              await transaction
-                .productImage
-                .update({
-                  where: {
-                    id:
-                      imageId,
-                  },
-
-                  data: {
-                    url:
-                      dto.url,
-
-                    altText:
-                      dto.altText ===
-                        undefined
-                        ? undefined
-                        : normalizeNullableText(
-                            dto.altText,
-                          ),
-
-                    sortOrder:
-                      dto.sortOrder,
-
-                    isPrimary:
-                      dto.isPrimary,
-                  },
-                });
-
-            await transaction
-              .userActivity
-              .create({
-                data:
-                  createCatalogActivityData({
-                    actorId,
-
-                    action:
-                      CATALOG_ACTIVITY_ACTION
-                        .PRODUCT_IMAGE_UPDATED,
-
-                    resourceType:
-                      CATALOG_RESOURCE_TYPE
-                        .PRODUCT_IMAGE,
-
-                    resourceId:
-                      imageId,
-
-                    description:
-                      `Updated image for product ${productId}`,
-
-                    metadata,
-                  }),
-              });
-
-            return result;
+            isPrimary: true,
           },
-        );
+
+          data: {
+            isPrimary: false,
+          },
+        });
+      }
+
+      const result = await transaction.productImage.update({
+        where: {
+          id: imageId,
+        },
+
+        data: {
+          url: dto.url,
+
+          altText:
+            dto.altText === undefined
+              ? undefined
+              : normalizeNullableText(dto.altText),
+
+          sortOrder: dto.sortOrder,
+
+          isPrimary: dto.isPrimary,
+        },
+      });
+
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
+
+          action: CATALOG_ACTIVITY_ACTION.PRODUCT_IMAGE_UPDATED,
+
+          resourceType: CATALOG_RESOURCE_TYPE.PRODUCT_IMAGE,
+
+          resourceId: imageId,
+
+          description: `Updated image for product ${productId}`,
+
+          metadata,
+        }),
+      });
+
+      return result;
+    });
 
     this.logger.log(
       `catalog.product_image.updated actor=${actorId} product=${productId} image=${imageId}`,
@@ -274,144 +194,100 @@ export class AdminProductImagesService {
     return updated;
   }
 
-
   async remove(
     productId: string,
     imageId: string,
     actorId: string,
     metadata: SessionMetadata,
   ): Promise<void> {
-    const image =
-      await this.prisma
-        .productImage
-        .findFirst({
-          where: {
-            id:
-              imageId,
+    const image = await this.prisma.productImage.findFirst({
+      where: {
+        id: imageId,
 
-            productId,
-          },
+        productId,
+      },
 
-          include: {
-            product: {
-              select: {
-                status:
-                  true,
-              },
-            },
+      include: {
+        product: {
+          select: {
+            status: true,
           },
-        });
+        },
+      },
+    });
 
     if (!image) {
-      throw new NotFoundException(
-        'Product image not found.',
-      );
+      throw new NotFoundException('Product image not found.');
     }
 
-    const count =
-      await this.prisma
-        .productImage
-        .count({
-          where: {
-            productId,
-          },
-        });
+    const count = await this.prisma.productImage.count({
+      where: {
+        productId,
+      },
+    });
 
-    if (
-      image.product.status ===
-        'ACTIVE' &&
-      count <= 1
-    ) {
+    if (image.product.status === 'ACTIVE' && count <= 1) {
       throw new ConflictException(
         'The last image cannot be removed from an active product.',
       );
     }
 
-    await this.prisma
-      .$transaction(
-        async (
-          transaction,
-        ) => {
-          await transaction
-            .productImage
-            .delete({
-              where: {
-                id:
-                  imageId,
-              },
-            });
-
-          if (
-            image.isPrimary
-          ) {
-            const replacement =
-              await transaction
-                .productImage
-                .findFirst({
-                  where: {
-                    productId,
-                  },
-
-                  orderBy: [
-                    {
-                      sortOrder:
-                        'asc',
-                    },
-                    {
-                      createdAt:
-                        'asc',
-                    },
-                  ],
-
-                  select: {
-                    id:
-                      true,
-                  },
-                });
-
-            if (replacement) {
-              await transaction
-                .productImage
-                .update({
-                  where: {
-                    id:
-                      replacement.id,
-                  },
-
-                  data: {
-                    isPrimary:
-                      true,
-                  },
-                });
-            }
-          }
-
-          await transaction
-            .userActivity
-            .create({
-              data:
-                createCatalogActivityData({
-                  actorId,
-
-                  action:
-                    CATALOG_ACTIVITY_ACTION
-                      .PRODUCT_IMAGE_DELETED,
-
-                  resourceType:
-                    CATALOG_RESOURCE_TYPE
-                      .PRODUCT_IMAGE,
-
-                  resourceId:
-                    imageId,
-
-                  description:
-                    `Deleted image from product ${productId}`,
-
-                  metadata,
-                }),
-            });
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.productImage.delete({
+        where: {
+          id: imageId,
         },
-      );
+      });
+
+      if (image.isPrimary) {
+        const replacement = await transaction.productImage.findFirst({
+          where: {
+            productId,
+          },
+
+          orderBy: [
+            {
+              sortOrder: 'asc',
+            },
+            {
+              createdAt: 'asc',
+            },
+          ],
+
+          select: {
+            id: true,
+          },
+        });
+
+        if (replacement) {
+          await transaction.productImage.update({
+            where: {
+              id: replacement.id,
+            },
+
+            data: {
+              isPrimary: true,
+            },
+          });
+        }
+      }
+
+      await transaction.userActivity.create({
+        data: createCatalogActivityData({
+          actorId,
+
+          action: CATALOG_ACTIVITY_ACTION.PRODUCT_IMAGE_DELETED,
+
+          resourceType: CATALOG_RESOURCE_TYPE.PRODUCT_IMAGE,
+
+          resourceId: imageId,
+
+          description: `Deleted image from product ${productId}`,
+
+          metadata,
+        }),
+      });
+    });
 
     this.logger.log(
       `catalog.product_image.deleted actor=${actorId} product=${productId} image=${imageId}`,
