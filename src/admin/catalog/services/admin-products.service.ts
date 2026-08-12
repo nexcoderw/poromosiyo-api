@@ -1,3 +1,4 @@
+import { ImageStorageService } from '../../../storage/image-storage.service';
 import { createCatalogActivityData } from '../utils/catalog-activity.util';
 import {
   CATALOG_ACTIVITY_ACTION,
@@ -31,7 +32,10 @@ import { normalizeCatalogSlug } from '../utils/catalog-slug.util';
 export class AdminProductsService {
   private readonly logger = new Logger(AdminProductsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imageStorage: ImageStorageService,
+  ) {}
 
   async list(
     query: ListProductsDto,
@@ -520,58 +524,101 @@ export class AdminProductsService {
     }
   }
 
+
   async remove(
     id: string,
     actorId: string,
     metadata: SessionMetadata,
   ): Promise<void> {
-    const product = await this.prisma.product.findUnique({
-      where: {
-        id,
-      },
+    const product =
+      await this.prisma
+        .product
+        .findUnique({
+          where: {
+            id,
+          },
 
-      select: {
-        id: true,
-        name: true,
-        status: true,
-      },
-    });
+          select: {
+            id: true,
+            name: true,
+            status: true,
+
+            images: {
+              select: {
+                url: true,
+              },
+            },
+          },
+        });
 
     if (!product) {
-      throw new NotFoundException('Product not found.');
+      throw new NotFoundException(
+        'Product not found.',
+      );
     }
 
-    if (product.status !== 'DRAFT') {
+    if (
+      product.status !==
+      'DRAFT'
+    ) {
       throw new ConflictException(
         'Only draft products can be permanently deleted. Archive published products instead.',
       );
     }
 
-    await this.prisma.$transaction(async (transaction) => {
-      await transaction.product.delete({
-        where: {
-          id,
+    await this.prisma
+      .$transaction(
+        async (
+          transaction,
+        ) => {
+          await transaction
+            .product
+            .delete({
+              where: {
+                id,
+              },
+            });
+
+          await transaction
+            .userActivity
+            .create({
+              data:
+                createCatalogActivityData({
+                  actorId,
+
+                  action:
+                    CATALOG_ACTIVITY_ACTION
+                      .PRODUCT_DELETED,
+
+                  resourceType:
+                    CATALOG_RESOURCE_TYPE
+                      .PRODUCT,
+
+                  resourceId:
+                    id,
+
+                  description:
+                    `Deleted product: ${product.name}`,
+
+                  metadata,
+                }),
+            });
         },
-      });
+      );
 
-      await transaction.userActivity.create({
-        data: createCatalogActivityData({
-          actorId,
+    await this.imageStorage
+      .deleteManyQuietly(
+        product.images.map(
+          (
+            image,
+          ) =>
+            image.url,
+        ),
+      );
 
-          action: CATALOG_ACTIVITY_ACTION.PRODUCT_DELETED,
-
-          resourceType: CATALOG_RESOURCE_TYPE.PRODUCT,
-
-          resourceId: id,
-
-          description: `Deleted product: ${product.name}`,
-
-          metadata,
-        }),
-      });
-    });
-
-    this.logger.log(`catalog.product.deleted actor=${actorId} product=${id}`);
+    this.logger.log(
+      `catalog.product.deleted actor=${actorId} product=${id}`,
+    );
   }
 
   private async assertStoreExists(id: string): Promise<{
