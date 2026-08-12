@@ -79,6 +79,8 @@ const environmentSchema = Joi.object({
   GOOGLE_AUTH_ENABLED: Joi.boolean().default(false),
 
   GOOGLE_CLIENT_ID: Joi.string().allow('').default(''),
+
+  GCS_IMAGE_BUCKET: Joi.string().trim().default('poromosiyo-images'),
 }).unknown(true);
 
 export function validateEnvironment(
