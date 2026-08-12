@@ -1,32 +1,15 @@
-import {
-  Module,
-} from '@nestjs/common';
+import { Module } from '@nestjs/common';
 
-import {
-  AuthModule,
-} from '../../auth/auth.module';
-import {
-  DatabaseModule,
-} from '../../database/database.module';
-import {
-  AdminDashboardController,
-} from './admin-dashboard.controller';
-import {
-  AdminDashboardService,
-} from './admin-dashboard.service';
+import { AuthModule } from '../../auth/auth.module';
+import { DatabaseModule } from '../../database/database.module';
+import { AdminDashboardController } from './admin-dashboard.controller';
+import { AdminDashboardService } from './admin-dashboard.service';
 
 @Module({
-  imports: [
-    DatabaseModule,
-    AuthModule,
-  ],
+  imports: [DatabaseModule, AuthModule],
 
-  controllers: [
-    AdminDashboardController,
-  ],
+  controllers: [AdminDashboardController],
 
-  providers: [
-    AdminDashboardService,
-  ],
+  providers: [AdminDashboardService],
 })
 export class AdminDashboardModule {}
