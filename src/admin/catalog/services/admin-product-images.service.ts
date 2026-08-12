@@ -11,6 +11,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '@poromosiyo/db';
+import { ImageStorageService } from '../../../storage/image-storage.service';
+import { PRODUCT_IMAGE_LIMIT } from '../../../storage/image-storage.constants';
 
 import type {
   CreateProductImageDto,
@@ -21,15 +23,19 @@ import type {
 export class AdminProductImagesService {
   private readonly logger = new Logger(AdminProductImagesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imageStorage: ImageStorageService,
+  ) {}
 
   async create(
     productId: string,
+    file: Express.Multer.File,
     dto: CreateProductImageDto,
     actorId: string,
     metadata: SessionMetadata,
   ) {
-    await this.assertProductExists(productId);
+    const product = await this.assertProductExists(productId);
 
     const existingCount = await this.prisma.productImage.count({
       where: {
@@ -39,52 +45,70 @@ export class AdminProductImagesService {
 
     const shouldBePrimary = existingCount === 0 || dto.isPrimary === true;
 
-    const image = await this.prisma.$transaction(async (transaction) => {
-      if (shouldBePrimary) {
-        await transaction.productImage.updateMany({
-          where: {
-            productId,
-            isPrimary: true,
-          },
+    if (existingCount >= PRODUCT_IMAGE_LIMIT) {
+      throw new ConflictException('A product can have at most 10 images.');
+    }
 
+    const objectPath = await this.imageStorage.store({
+      file,
+      owner: 'products',
+      ownerId: productId,
+      slug: product.name,
+    });
+
+    let image;
+
+    try {
+      image = await this.prisma.$transaction(async (transaction) => {
+        if (shouldBePrimary) {
+          await transaction.productImage.updateMany({
+            where: {
+              productId,
+              isPrimary: true,
+            },
+
+            data: {
+              isPrimary: false,
+            },
+          });
+        }
+
+        const created = await transaction.productImage.create({
           data: {
-            isPrimary: false,
+            productId,
+
+            url: objectPath,
+
+            altText: normalizeNullableText(dto.altText),
+
+            sortOrder: dto.sortOrder ?? existingCount,
+
+            isPrimary: shouldBePrimary,
           },
         });
-      }
 
-      const created = await transaction.productImage.create({
-        data: {
-          productId,
+        await transaction.userActivity.create({
+          data: createCatalogActivityData({
+            actorId,
 
-          url: dto.url,
+            action: CATALOG_ACTIVITY_ACTION.PRODUCT_IMAGE_CREATED,
 
-          altText: normalizeNullableText(dto.altText),
+            resourceType: CATALOG_RESOURCE_TYPE.PRODUCT_IMAGE,
 
-          sortOrder: dto.sortOrder ?? existingCount,
+            resourceId: created.id,
 
-          isPrimary: shouldBePrimary,
-        },
+            description: `Created image for product ${productId}`,
+
+            metadata,
+          }),
+        });
+
+        return created;
       });
-
-      await transaction.userActivity.create({
-        data: createCatalogActivityData({
-          actorId,
-
-          action: CATALOG_ACTIVITY_ACTION.PRODUCT_IMAGE_CREATED,
-
-          resourceType: CATALOG_RESOURCE_TYPE.PRODUCT_IMAGE,
-
-          resourceId: created.id,
-
-          description: `Created image for product ${productId}`,
-
-          metadata,
-        }),
-      });
-
-      return created;
-    });
+    } catch (error) {
+      await this.imageStorage.delete(objectPath);
+      throw error;
+    }
 
     this.logger.log(
       `catalog.product_image.created actor=${actorId} product=${productId} image=${image.id}`,
@@ -155,8 +179,6 @@ export class AdminProductImagesService {
         },
 
         data: {
-          url: dto.url,
-
           altText:
             dto.altText === undefined
               ? undefined
@@ -289,24 +311,30 @@ export class AdminProductImagesService {
       });
     });
 
+    await this.imageStorage.delete(image.url);
+
     this.logger.log(
       `catalog.product_image.deleted actor=${actorId} product=${productId} image=${imageId}`,
     );
   }
 
-  private async assertProductExists(productId: string): Promise<void> {
+  private async assertProductExists(
+    productId: string,
+  ): Promise<{ name: string }> {
     const product = await this.prisma.product.findUnique({
       where: {
         id: productId,
       },
       select: {
-        id: true,
+        name: true,
       },
     });
 
     if (!product) {
       throw new NotFoundException('Product not found.');
     }
+
+    return product;
   }
 }
 
