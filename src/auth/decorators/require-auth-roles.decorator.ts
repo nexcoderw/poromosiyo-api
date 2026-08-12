@@ -1,7 +1,11 @@
-import { SetMetadata } from '@nestjs/common';
+import { applyDecorators, SetMetadata } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
 import { AUTH_ROLES_METADATA_KEY } from '../auth.constants';
 import type { AuthRole } from '../types/auth.types';
 
 export const RequireAuthRoles = (...roles: AuthRole[]) =>
-  SetMetadata(AUTH_ROLES_METADATA_KEY, roles);
+  applyDecorators(
+    SetMetadata(AUTH_ROLES_METADATA_KEY, roles),
+    ApiBearerAuth('access-token'),
+  );
