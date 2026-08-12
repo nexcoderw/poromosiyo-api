@@ -1,3 +1,6 @@
+import { createCatalogActivityData } from '../utils/catalog-activity.util';
+import { CATALOG_ACTIVITY_ACTION, CATALOG_RESOURCE_TYPE } from '../catalog-activity.constants';
+import type { SessionMetadata } from '../../../auth/types/auth.types';
 import {
   ConflictException,
   Injectable,
@@ -152,156 +155,388 @@ export class AdminCategoriesService {
     return category;
   }
 
-  async create(dto: CreateCategoryDto, actorId: string) {
+
+  async create(
+    dto: CreateCategoryDto,
+    actorId: string,
+    metadata: SessionMetadata,
+  ) {
     if (dto.parentId) {
-      await this.assertValidParent(dto.parentId, null);
+      await this.assertValidParent(
+        dto.parentId,
+        null,
+      );
     }
 
-    const slug = await this.resolveUniqueSlug(dto.slug ?? dto.name, null);
+    const slug =
+      await this.resolveUniqueSlug(
+        dto.slug ?? dto.name,
+        null,
+      );
 
     try {
-      const category = await this.prisma.category.create({
-        data: {
-          name: dto.name.trim(),
-          slug,
-          parentId: dto.parentId ?? null,
-          description: normalizeNullableText(dto.description),
-          image: dto.image ?? null,
-          isActive: dto.isActive ?? true,
-          sortOrder: dto.sortOrder ?? 0,
-        },
-      });
+      const category =
+        await this.prisma
+          .$transaction(
+            async (
+              transaction,
+            ) => {
+              const created =
+                await transaction
+                  .category
+                  .create({
+                    data: {
+                      name:
+                        dto.name.trim(),
+
+                      slug,
+
+                      parentId:
+                        dto.parentId ??
+                        null,
+
+                      description:
+                        normalizeNullableText(
+                          dto.description,
+                        ),
+
+                      image:
+                        dto.image ??
+                        null,
+
+                      isActive:
+                        dto.isActive ??
+                        true,
+
+                      sortOrder:
+                        dto.sortOrder ??
+                        0,
+                    },
+                  });
+
+              await transaction
+                .userActivity
+                .create({
+                  data:
+                    createCatalogActivityData({
+                      actorId,
+
+                      action:
+                        CATALOG_ACTIVITY_ACTION
+                          .CATEGORY_CREATED,
+
+                      resourceType:
+                        CATALOG_RESOURCE_TYPE
+                          .CATEGORY,
+
+                      resourceId:
+                        created.id,
+
+                      description:
+                        `Created category: ${created.name}`,
+
+                      metadata,
+                    }),
+                });
+
+              return created;
+            },
+          );
 
       this.logger.log(
         `catalog.category.created actor=${actorId} category=${category.id}`,
       );
 
       return category;
-    } catch (error: unknown) {
-      if (isPrismaErrorCode(error, 'P2002')) {
-        throw new ConflictException('Category slug already exists.');
+    } catch (
+      error: unknown
+    ) {
+      if (
+        isPrismaErrorCode(
+          error,
+          'P2002',
+        )
+      ) {
+        throw new ConflictException(
+          'Category slug already exists.',
+        );
       }
 
       throw error;
     }
   }
 
-  async update(id: string, dto: UpdateCategoryDto, actorId: string) {
-    const existing = await this.prisma.category.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        _count: {
-          select: {
-            products: {
-              where: {
-                status: 'ACTIVE',
+
+  async update(
+    id: string,
+    dto: UpdateCategoryDto,
+    actorId: string,
+    metadata: SessionMetadata,
+  ) {
+    const existing =
+      await this.prisma
+        .category
+        .findUnique({
+          where: {
+            id,
+          },
+
+          include: {
+            _count: {
+              select: {
+                products: {
+                  where: {
+                    status:
+                      'ACTIVE',
+                  },
+                },
               },
             },
           },
-        },
-      },
-    });
+        });
 
     if (!existing) {
-      throw new NotFoundException('Category not found.');
+      throw new NotFoundException(
+        'Category not found.',
+      );
     }
 
-    if (dto.isActive === false && existing._count.products > 0) {
+    if (
+      dto.isActive ===
+        false &&
+      existing._count.products >
+        0
+    ) {
       throw new ConflictException(
         'Deactivate or move active products before deactivating this category.',
       );
     }
 
-    if (dto.parentId !== undefined) {
-      if (dto.parentId) {
-        await this.assertValidParent(dto.parentId, id);
-      }
+    if (
+      dto.parentId !==
+      undefined &&
+      dto.parentId
+    ) {
+      await this.assertValidParent(
+        dto.parentId,
+        id,
+      );
     }
 
-    let slug: string | undefined;
+    let slug:
+      string | undefined;
 
-    if (dto.slug !== undefined) {
-      slug = await this.resolveUniqueSlug(dto.slug, id);
+    if (
+      dto.slug !==
+      undefined
+    ) {
+      slug =
+        await this.resolveUniqueSlug(
+          dto.slug,
+          id,
+        );
     }
 
     try {
-      const category = await this.prisma.category.update({
-        where: {
-          id,
-        },
-        data: {
-          name: dto.name?.trim(),
-          slug,
-          parentId: dto.parentId,
-          description:
-            dto.description === undefined
-              ? undefined
-              : normalizeNullableText(dto.description),
-          image: dto.image,
-          isActive: dto.isActive,
-          sortOrder: dto.sortOrder,
-        },
-      });
+      const category =
+        await this.prisma
+          .$transaction(
+            async (
+              transaction,
+            ) => {
+              const updated =
+                await transaction
+                  .category
+                  .update({
+                    where: {
+                      id,
+                    },
+
+                    data: {
+                      name:
+                        dto.name
+                          ?.trim(),
+
+                      slug,
+
+                      parentId:
+                        dto.parentId,
+
+                      description:
+                        dto.description ===
+                          undefined
+                          ? undefined
+                          : normalizeNullableText(
+                              dto.description,
+                            ),
+
+                      image:
+                        dto.image,
+
+                      isActive:
+                        dto.isActive,
+
+                      sortOrder:
+                        dto.sortOrder,
+                    },
+                  });
+
+              await transaction
+                .userActivity
+                .create({
+                  data:
+                    createCatalogActivityData({
+                      actorId,
+
+                      action:
+                        CATALOG_ACTIVITY_ACTION
+                          .CATEGORY_UPDATED,
+
+                      resourceType:
+                        CATALOG_RESOURCE_TYPE
+                          .CATEGORY,
+
+                      resourceId:
+                        updated.id,
+
+                      description:
+                        `Updated category: ${updated.name}`,
+
+                      metadata,
+                    }),
+                });
+
+              return updated;
+            },
+          );
 
       this.logger.log(
         `catalog.category.updated actor=${actorId} category=${id}`,
       );
 
       return category;
-    } catch (error: unknown) {
-      if (isPrismaErrorCode(error, 'P2002')) {
-        throw new ConflictException('Category slug already exists.');
+    } catch (
+      error: unknown
+    ) {
+      if (
+        isPrismaErrorCode(
+          error,
+          'P2002',
+        )
+      ) {
+        throw new ConflictException(
+          'Category slug already exists.',
+        );
       }
 
       throw error;
     }
   }
 
-  async remove(id: string, actorId: string): Promise<void> {
-    const category = await this.prisma.category.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        _count: {
-          select: {
-            children: true,
-            products: true,
+
+  async remove(
+    id: string,
+    actorId: string,
+    metadata: SessionMetadata,
+  ): Promise<void> {
+    const category =
+      await this.prisma
+        .category
+        .findUnique({
+          where: {
+            id,
           },
-        },
-      },
-    });
+
+          include: {
+            _count: {
+              select: {
+                children:
+                  true,
+
+                products:
+                  true,
+              },
+            },
+          },
+        });
 
     if (!category) {
-      throw new NotFoundException('Category not found.');
+      throw new NotFoundException(
+        'Category not found.',
+      );
     }
 
-    if (category._count.children > 0) {
+    if (
+      category._count.children >
+      0
+    ) {
       throw new ConflictException(
         'Delete or move child categories before deleting this category.',
       );
     }
 
-    if (category._count.products > 0) {
+    if (
+      category._count.products >
+      0
+    ) {
       throw new ConflictException(
         'Delete or move products before deleting this category.',
       );
     }
 
     try {
-      await this.prisma.category.delete({
-        where: {
-          id,
-        },
-      });
+      await this.prisma
+        .$transaction(
+          async (
+            transaction,
+          ) => {
+            await transaction
+              .category
+              .delete({
+                where: {
+                  id,
+                },
+              });
+
+            await transaction
+              .userActivity
+              .create({
+                data:
+                  createCatalogActivityData({
+                    actorId,
+
+                    action:
+                      CATALOG_ACTIVITY_ACTION
+                        .CATEGORY_DELETED,
+
+                    resourceType:
+                      CATALOG_RESOURCE_TYPE
+                        .CATEGORY,
+
+                    resourceId:
+                      id,
+
+                    description:
+                      `Deleted category: ${category.name}`,
+
+                    metadata,
+                  }),
+              });
+          },
+        );
 
       this.logger.log(
         `catalog.category.deleted actor=${actorId} category=${id}`,
       );
-    } catch (error: unknown) {
-      if (isPrismaErrorCode(error, 'P2003')) {
+    } catch (
+      error: unknown
+    ) {
+      if (
+        isPrismaErrorCode(
+          error,
+          'P2003',
+        )
+      ) {
         throw new ConflictException(
           'Category is still referenced by catalog data.',
         );
