@@ -52,3 +52,13 @@ export type UserActivityResponse = {
     role: 'CUSTOMER' | 'ADMIN' | 'SUPERADMIN';
   } | null;
 };
+
+
+export type ManagedAuthSessionResponse = {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  createdAt: Date;
+  lastSeenAt: Date;
+  expiresAt: Date;
+};
