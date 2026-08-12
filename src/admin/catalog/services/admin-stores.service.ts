@@ -19,12 +19,49 @@ import type {
 } from '../dto/store.dto';
 import { isPrismaErrorCode } from '../utils/catalog-prisma-error.util';
 import { normalizeCatalogSlug } from '../utils/catalog-slug.util';
+import { ImageStorageService } from '../../../storage/image-storage.service';
 
 @Injectable()
 export class AdminStoresService {
   private readonly logger = new Logger(AdminStoresService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imageStorage: ImageStorageService,
+  ) {}
+
+  async updateLogo(id: string, file: Express.Multer.File) {
+    const store = await this.prisma.store.findUnique({
+      where: { id },
+      select: { id: true, name: true, slug: true, logo: true },
+    });
+
+    if (!store) {
+      throw new NotFoundException('Store not found.');
+    }
+
+    const objectPath = await this.imageStorage.store({
+      file,
+      owner: 'stores',
+      ownerId: store.id,
+      slug: store.slug || store.name,
+    });
+
+    let updated;
+
+    try {
+      updated = await this.prisma.store.update({
+        where: { id },
+        data: { logo: objectPath },
+      });
+    } catch (error) {
+      await this.imageStorage.delete(objectPath);
+      throw error;
+    }
+
+    await this.imageStorage.delete(store.logo);
+    return updated;
+  }
 
   async list(query: ListStoresDto): Promise<PaginatedResult<unknown>> {
     const search = query.search?.trim();
@@ -128,8 +165,6 @@ export class AdminStoresService {
 
             description: normalizeNullableText(dto.description),
 
-            logo: dto.logo ?? null,
-
             website: dto.website ?? null,
 
             isActive: dto.isActive ?? true,
@@ -230,8 +265,6 @@ export class AdminStoresService {
                 ? undefined
                 : normalizeNullableText(dto.description),
 
-            logo: dto.logo,
-
             website: dto.website,
 
             isActive: dto.isActive,
@@ -331,6 +364,8 @@ export class AdminStoresService {
         },
       });
     });
+
+    await this.imageStorage.delete(store.logo);
 
     this.logger.log(`catalog.store.deleted actor=${actorId} store=${id}`);
   }
