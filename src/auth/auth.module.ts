@@ -24,6 +24,7 @@ import { PasswordHasherService } from './services/password-hasher.service';
 import { PasswordRecoveryService } from './services/password-recovery.service';
 import { SessionManagementService } from './services/session-management.service';
 import { TokenHasherService } from './services/token-hasher.service';
+import { ProfileImageService } from './services/profile-image.service';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { TokenHasherService } from './services/token-hasher.service';
     AuthMailService,
     EmailVerificationService,
     PasswordRecoveryService,
+    ProfileImageService,
 
     {
       provide: APP_INTERCEPTOR,
