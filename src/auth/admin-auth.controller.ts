@@ -6,8 +6,11 @@ import {
   HttpStatus,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 
@@ -37,6 +40,9 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { getSessionMetadata } from './request-metadata';
 import { EmailVerificationService } from './services/email-verification.service';
 import { PasswordRecoveryService } from './services/password-recovery.service';
+import { ProfileImageService } from './services/profile-image.service';
+import { IMAGE_UPLOAD_FIELD } from '../storage/image-storage.constants';
+import { imageUploadOptions } from '../storage/image-upload.options';
 import type {
   AuthenticatedUser,
   AuthenticationResult,
@@ -56,6 +62,7 @@ export class AdminAuthController {
     private readonly authService: AuthService,
     private readonly emailVerification: EmailVerificationService,
     private readonly passwordRecovery: PasswordRecoveryService,
+    private readonly profileImage: ProfileImageService,
   ) {}
 
   @Post('login')
@@ -220,6 +227,17 @@ export class AdminAuthController {
     user: AuthPrincipal,
   ): AuthenticatedUser {
     return toPublicUser(user);
+  }
+
+  @Post('me/image')
+  @RequireAuthRoles('ADMIN')
+  @UseGuards(JwtAuthGuard, AuthRoleGuard)
+  @UseInterceptors(FileInterceptor(IMAGE_UPLOAD_FIELD, imageUploadOptions))
+  updateProfileImage(
+    @CurrentUser() user: AuthPrincipal,
+    @UploadedFile() image: Express.Multer.File,
+  ) {
+    return this.profileImage.update(user, image);
   }
 }
 
