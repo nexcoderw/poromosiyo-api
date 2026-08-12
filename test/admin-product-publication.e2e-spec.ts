@@ -309,6 +309,7 @@ describe('Poromosiyo admin product publication (e2e)', () => {
         description: 'Complete publication-ready product description.',
         originalPrice: '10000.00',
         sellingPrice: '7500.00',
+        expiresAt: futureExpiration(),
       })
       .expect(201);
 
@@ -407,6 +408,10 @@ function parseAuth(text: string): AuthenticationResult {
   }
 
   return value as AuthenticationResult;
+}
+
+function futureExpiration(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function parseObject(text: string): Record<string, unknown> {
