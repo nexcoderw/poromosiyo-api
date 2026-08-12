@@ -1,3 +1,4 @@
+import { ImageStorageService } from '../../../storage/image-storage.service';
 import { createCatalogActivityData } from '../utils/catalog-activity.util';
 import {
   CATALOG_ACTIVITY_ACTION,
@@ -25,7 +26,202 @@ import { normalizeCatalogSlug } from '../utils/catalog-slug.util';
 export class AdminCategoriesService {
   private readonly logger = new Logger(AdminCategoriesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imageStorage: ImageStorageService,
+  ) {}
+
+  async updateImage(
+    id: string,
+    file: Express.Multer.File,
+    actorId: string,
+    metadata: SessionMetadata,
+  ) {
+    const category =
+      await this.prisma
+        .category
+        .findUnique({
+          where: {
+            id,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            image: true,
+          },
+        });
+
+    if (!category) {
+      throw new NotFoundException(
+        'Category not found.',
+      );
+    }
+
+    const uploaded =
+      await this.imageStorage
+        .store({
+          file,
+          owner:
+            'categories',
+          ownerId:
+            category.id,
+          slug:
+            category.slug ||
+            category.name,
+        });
+
+    let updated;
+
+    try {
+      updated =
+        await this.prisma
+          .$transaction(
+            async (
+              transaction,
+            ) => {
+              const result =
+                await transaction
+                  .category
+                  .update({
+                    where: {
+                      id,
+                    },
+
+                    data: {
+                      image:
+                        uploaded,
+                    },
+                  });
+
+              await transaction
+                .userActivity
+                .create({
+                  data:
+                    createCatalogActivityData({
+                      actorId,
+
+                      action:
+                        CATALOG_ACTIVITY_ACTION
+                          .CATEGORY_IMAGE_UPDATED,
+
+                      resourceType:
+                        CATALOG_RESOURCE_TYPE
+                          .CATEGORY,
+
+                      resourceId:
+                        category.id,
+
+                      description:
+                        `Updated category image: ${category.name}`,
+
+                      metadata,
+                    }),
+                });
+
+              return result;
+            },
+          );
+    } catch (
+      error: unknown
+    ) {
+      await this.imageStorage
+        .deleteQuietly(
+          uploaded,
+        );
+
+      throw error;
+    }
+
+    await this.imageStorage
+      .deleteQuietly(
+        category.image,
+      );
+
+    return updated;
+  }
+
+  async removeImage(
+    id: string,
+    actorId: string,
+    metadata: SessionMetadata,
+  ): Promise<void> {
+    const category =
+      await this.prisma
+        .category
+        .findUnique({
+          where: {
+            id,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          },
+        });
+
+    if (!category) {
+      throw new NotFoundException(
+        'Category not found.',
+      );
+    }
+
+    if (!category.image) {
+      return;
+    }
+
+    await this.prisma
+      .$transaction(
+        async (
+          transaction,
+        ) => {
+          await transaction
+            .category
+            .update({
+              where: {
+                id,
+              },
+
+              data: {
+                image:
+                  null,
+              },
+            });
+
+          await transaction
+            .userActivity
+            .create({
+              data:
+                createCatalogActivityData({
+                  actorId,
+
+                  action:
+                    CATALOG_ACTIVITY_ACTION
+                      .CATEGORY_IMAGE_REMOVED,
+
+                  resourceType:
+                    CATALOG_RESOURCE_TYPE
+                      .CATEGORY,
+
+                  resourceId:
+                    id,
+
+                  description:
+                    `Removed category image: ${category.name}`,
+
+                  metadata,
+                }),
+            });
+        },
+      );
+
+    await this.imageStorage
+      .deleteQuietly(
+        category.image,
+      );
+  }
 
   async list(query: ListCategoriesDto): Promise<PaginatedResult<unknown>> {
     const page = query.page;
@@ -181,7 +377,6 @@ export class AdminCategoriesService {
 
             description: normalizeNullableText(dto.description),
 
-            image: dto.image ?? null,
 
             isActive: dto.isActive ?? true,
 
@@ -285,7 +480,6 @@ export class AdminCategoriesService {
                 ? undefined
                 : normalizeNullableText(dto.description),
 
-            image: dto.image,
 
             isActive: dto.isActive,
 
@@ -387,6 +581,11 @@ export class AdminCategoriesService {
           }),
         });
       });
+
+      await this.imageStorage
+        .deleteQuietly(
+          category.image,
+        );
 
       this.logger.log(
         `catalog.category.deleted actor=${actorId} category=${id}`,
