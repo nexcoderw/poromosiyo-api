@@ -9,8 +9,11 @@ import {
   Patch,
   Post,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import type { Request } from 'express';
 
 import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
@@ -24,6 +27,8 @@ import {
   UpdateProductImageDto,
 } from '../dto/product-image.dto';
 import { AdminProductImagesService } from '../services/admin-product-images.service';
+import { IMAGE_UPLOAD_FIELD } from '../../../storage/image-storage.constants';
+import { imageUploadOptions } from '../../../storage/image-upload.options';
 
 @Controller({
   path: 'admin/products/:productId/images',
@@ -35,6 +40,7 @@ export class AdminProductImagesController {
   constructor(private readonly images: AdminProductImagesService) {}
 
   @Post()
+  @UseInterceptors(FileInterceptor(IMAGE_UPLOAD_FIELD, imageUploadOptions))
   create(
     @Param(
       'productId',
@@ -43,6 +49,9 @@ export class AdminProductImagesController {
       }),
     )
     productId: string,
+
+    @UploadedFile()
+    image: Express.Multer.File,
 
     @Body()
     dto: CreateProductImageDto,
@@ -55,6 +64,7 @@ export class AdminProductImagesController {
   ) {
     return this.images.create(
       productId,
+      image,
       dto,
       admin.id,
       getSessionMetadata(request),
