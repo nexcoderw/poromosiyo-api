@@ -30,37 +30,211 @@ export class AdminStoresService {
     private readonly imageStorage: ImageStorageService,
   ) {}
 
-  async updateLogo(id: string, file: Express.Multer.File) {
-    const store = await this.prisma.store.findUnique({
-      where: { id },
-      select: { id: true, name: true, slug: true, logo: true },
-    });
+
+  async updateLogo(
+    id: string,
+    file: Express.Multer.File,
+    actorId: string,
+    metadata: SessionMetadata,
+  ) {
+    const store =
+      await this.prisma
+        .store
+        .findUnique({
+          where: {
+            id,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logo: true,
+          },
+        });
 
     if (!store) {
-      throw new NotFoundException('Store not found.');
+      throw new NotFoundException(
+        'Store not found.',
+      );
     }
 
-    const objectPath = await this.imageStorage.store({
-      file,
-      owner: 'stores',
-      ownerId: store.id,
-      slug: store.slug || store.name,
-    });
+    const uploaded =
+      await this.imageStorage
+        .store({
+          file,
+          owner:
+            'stores',
+          ownerId:
+            store.id,
+          slug:
+            store.slug ||
+            store.name,
+        });
 
     let updated;
 
     try {
-      updated = await this.prisma.store.update({
-        where: { id },
-        data: { logo: objectPath },
-      });
-    } catch (error) {
-      await this.imageStorage.delete(objectPath);
+      updated =
+        await this.prisma
+          .$transaction(
+            async (
+              transaction,
+            ) => {
+              const result =
+                await transaction
+                  .store
+                  .update({
+                    where: {
+                      id,
+                    },
+
+                    data: {
+                      logo:
+                        uploaded,
+                    },
+                  });
+
+              await transaction
+                .userActivity
+                .create({
+                  data: {
+                    subjectUserId:
+                      actorId,
+
+                    actorUserId:
+                      actorId,
+
+                    action:
+                      CATALOG_ACTIVITY_ACTION
+                        .STORE_LOGO_UPDATED,
+
+                    resourceType:
+                      CATALOG_RESOURCE_TYPE
+                        .STORE,
+
+                    resourceId:
+                      id,
+
+                    description:
+                      `Updated store logo: ${store.name}`,
+
+                    ipAddress:
+                      metadata.ipAddress,
+
+                    userAgent:
+                      metadata.userAgent,
+                  },
+                });
+
+              return result;
+            },
+          );
+    } catch (
+      error: unknown
+    ) {
+      await this.imageStorage
+        .deleteQuietly(
+          uploaded,
+        );
+
       throw error;
     }
 
-    await this.imageStorage.delete(store.logo);
+    await this.imageStorage
+      .deleteQuietly(
+        store.logo,
+      );
+
     return updated;
+  }
+
+  async removeLogo(
+    id: string,
+    actorId: string,
+    metadata: SessionMetadata,
+  ): Promise<void> {
+    const store =
+      await this.prisma
+        .store
+        .findUnique({
+          where: {
+            id,
+          },
+
+          select: {
+            id: true,
+            name: true,
+            logo: true,
+          },
+        });
+
+    if (!store) {
+      throw new NotFoundException(
+        'Store not found.',
+      );
+    }
+
+    if (!store.logo) {
+      return;
+    }
+
+    await this.prisma
+      .$transaction(
+        async (
+          transaction,
+        ) => {
+          await transaction
+            .store
+            .update({
+              where: {
+                id,
+              },
+
+              data: {
+                logo:
+                  null,
+              },
+            });
+
+          await transaction
+            .userActivity
+            .create({
+              data: {
+                subjectUserId:
+                  actorId,
+
+                actorUserId:
+                  actorId,
+
+                action:
+                  CATALOG_ACTIVITY_ACTION
+                    .STORE_LOGO_REMOVED,
+
+                resourceType:
+                  CATALOG_RESOURCE_TYPE
+                    .STORE,
+
+                resourceId:
+                  id,
+
+                description:
+                  `Removed store logo: ${store.name}`,
+
+                ipAddress:
+                  metadata.ipAddress,
+
+                userAgent:
+                  metadata.userAgent,
+              },
+            });
+        },
+      );
+
+    await this.imageStorage
+      .deleteQuietly(
+        store.logo,
+      );
   }
 
   async list(query: ListStoresDto): Promise<PaginatedResult<unknown>> {
@@ -365,7 +539,10 @@ export class AdminStoresService {
       });
     });
 
-    await this.imageStorage.delete(store.logo);
+    await this.imageStorage
+      .deleteQuietly(
+        store.logo,
+      );
 
     this.logger.log(`catalog.store.deleted actor=${actorId} store=${id}`);
   }
