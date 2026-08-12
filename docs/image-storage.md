@@ -1,8 +1,8 @@
 # Image Storage
 
-Poromosiyo stores uploaded image binaries in the private Google Cloud Storage
-bucket configured by `GCS_IMAGE_BUCKET`. MySQL stores only the object path; it
-must never store a Base64 data URL or image bytes.
+Poromosiyo stores uploaded image binaries in the public-read Google Cloud
+Storage bucket configured by `GCS_IMAGE_BUCKET`. MySQL stores the canonical
+public HTTPS URL; it must never store a Base64 data URL or image bytes.
 
 ## Object layout
 
@@ -13,9 +13,11 @@ stores/<store-id>/<store-slug>-<timestamp>-<uuid>.webp
 ```
 
 Names are derived from the owning record and include a timestamp and UUID to
-avoid collisions. Replacing a profile or store image deletes the previous
-managed object after the database update succeeds. Deleting a product image or
-store also removes its managed object.
+avoid collisions. API responses expose URLs under
+`https://storage.googleapis.com/<bucket>/<object-path>`, so storefront users
+can view images without credentials. Replacing a profile or store image deletes
+the previous managed object after the database update succeeds. Deleting a
+product image or store also removes its managed object.
 
 ## Upload contract
 
@@ -43,6 +45,8 @@ dedicated service account to the runtime instead of storing a key in this
 repository. Grant it only the permissions required to create and delete objects
 in `poromosiyo-images` (the Storage Object User role at bucket scope).
 
-The bucket is private. API responses contain the stored object path; consumers
-must not construct public URLs for it. A signed/read endpoint should be added
-when image delivery is introduced.
+The bucket uses uniform bucket-level access and grants `allUsers` only the
+Storage Object Viewer role. Public users can read images but cannot create,
+replace, or delete them. Public access prevention must not be enforced on this
+dedicated image bucket. Never store private customer documents, credentials,
+invoices, or internal files in it.
