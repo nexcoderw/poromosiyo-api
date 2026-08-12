@@ -13,105 +13,58 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import type {
-  Request,
-} from 'express';
+import type { Request } from 'express';
 
-import {
-  CurrentUser,
-} from '../../../auth/decorators/current-user.decorator';
-import {
-  RequireAuthRoles,
-} from '../../../auth/decorators/require-auth-roles.decorator';
-import {
-  AuthRoleGuard,
-} from '../../../auth/guards/auth-role.guard';
-import {
-  JwtAuthGuard,
-} from '../../../auth/guards/jwt-auth.guard';
-import {
-  getSessionMetadata,
-} from '../../../auth/request-metadata';
-import type {
-  AuthPrincipal,
-} from '../../../auth/types/auth.types';
-import {
-  BlockAccountDto,
-} from '../dto/block-account.dto';
-import {
-  CreateAdminDto,
-} from '../dto/create-admin.dto';
-import {
-  ListGovernedUsersDto,
-} from '../dto/list-governed-users.dto';
-import {
-  ListUserActivitiesDto,
-} from '../dto/list-user-activities.dto';
-import {
-  AdminAdminsService,
-} from '../services/admin-admins.service';
-import {
-  AdminManagedSessionsService,
-} from '../services/admin-managed-sessions.service';
-import {
-  AdminUserActivitiesService,
-} from '../services/admin-user-activities.service';
+import { CurrentUser } from '../../../auth/decorators/current-user.decorator';
+import { RequireAuthRoles } from '../../../auth/decorators/require-auth-roles.decorator';
+import { AuthRoleGuard } from '../../../auth/guards/auth-role.guard';
+import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
+import { getSessionMetadata } from '../../../auth/request-metadata';
+import type { AuthPrincipal } from '../../../auth/types/auth.types';
+import { BlockAccountDto } from '../dto/block-account.dto';
+import { CreateAdminDto } from '../dto/create-admin.dto';
+import { ListGovernedUsersDto } from '../dto/list-governed-users.dto';
+import { ListUserActivitiesDto } from '../dto/list-user-activities.dto';
+import { AdminAdminsService } from '../services/admin-admins.service';
+import { AdminManagedSessionsService } from '../services/admin-managed-sessions.service';
+import { AdminUserActivitiesService } from '../services/admin-user-activities.service';
 
 @Controller({
   path: 'admin/admins',
   version: '1',
 })
 @RequireAuthRoles('ADMIN')
-@UseGuards(
-  JwtAuthGuard,
-  AuthRoleGuard,
-)
+@UseGuards(JwtAuthGuard, AuthRoleGuard)
 export class AdminAdminsController {
   constructor(
-    private readonly admins:
-      AdminAdminsService,
+    private readonly admins: AdminAdminsService,
 
-    private readonly activities:
-      AdminUserActivitiesService,
+    private readonly activities: AdminUserActivitiesService,
 
-    private readonly sessions:
-      AdminManagedSessionsService,
+    private readonly sessions: AdminManagedSessionsService,
   ) {}
 
   @Get()
   list(
     @Query()
-    query:
-      ListGovernedUsersDto,
+    query: ListGovernedUsersDto,
   ) {
-    return this.admins.list(
-      query,
-    );
+    return this.admins.list(query);
   }
 
   @Post()
-  @RequireAuthRoles(
-    'SUPERADMIN',
-  )
+  @RequireAuthRoles('SUPERADMIN')
   create(
     @Body()
     dto: CreateAdminDto,
 
     @CurrentUser()
-    superadmin:
-      AuthPrincipal,
+    superadmin: AuthPrincipal,
 
     @Req()
-    request:
-      Request,
+    request: Request,
   ) {
-    return this.admins.create(
-      dto,
-      superadmin,
-      getSessionMetadata(
-        request,
-      ),
-    );
+    return this.admins.create(dto, superadmin, getSessionMetadata(request));
   }
 
   @Get(':id/activities')
@@ -125,20 +78,13 @@ export class AdminAdminsController {
     id: string,
 
     @Query()
-    query:
-      ListUserActivitiesDto,
+    query: ListUserActivitiesDto,
   ) {
-    return this.activities
-      .listAdminActivities(
-        id,
-        query,
-      );
+    return this.activities.listAdminActivities(id, query);
   }
 
   @Get(':id/sessions')
-  @RequireAuthRoles(
-    'SUPERADMIN',
-  )
+  @RequireAuthRoles('SUPERADMIN')
   listSessions(
     @Param(
       'id',
@@ -148,21 +94,12 @@ export class AdminAdminsController {
     )
     id: string,
   ) {
-    return this.sessions
-      .listAdmin(
-        id,
-      );
+    return this.sessions.listAdmin(id);
   }
 
-  @Delete(
-    ':id/sessions/:sessionId',
-  )
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
-  @RequireAuthRoles(
-    'SUPERADMIN',
-  )
+  @Delete(':id/sessions/:sessionId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuthRoles('SUPERADMIN')
   async revokeSession(
     @Param(
       'id',
@@ -181,31 +118,22 @@ export class AdminAdminsController {
     sessionId: string,
 
     @CurrentUser()
-    superadmin:
-      AuthPrincipal,
+    superadmin: AuthPrincipal,
 
     @Req()
-    request:
-      Request,
+    request: Request,
   ): Promise<void> {
-    await this.sessions
-      .revokeAdmin(
-        id,
-        sessionId,
-        superadmin,
-        getSessionMetadata(
-          request,
-        ),
-      );
+    await this.sessions.revokeAdmin(
+      id,
+      sessionId,
+      superadmin,
+      getSessionMetadata(request),
+    );
   }
 
   @Post(':id/logout-all')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
-  @RequireAuthRoles(
-    'SUPERADMIN',
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuthRoles('SUPERADMIN')
   async logoutAll(
     @Param(
       'id',
@@ -216,30 +144,21 @@ export class AdminAdminsController {
     id: string,
 
     @CurrentUser()
-    superadmin:
-      AuthPrincipal,
+    superadmin: AuthPrincipal,
 
     @Req()
-    request:
-      Request,
+    request: Request,
   ): Promise<void> {
-    await this.sessions
-      .logoutAllAdmin(
-        id,
-        superadmin,
-        getSessionMetadata(
-          request,
-        ),
-      );
+    await this.sessions.logoutAllAdmin(
+      id,
+      superadmin,
+      getSessionMetadata(request),
+    );
   }
 
   @Patch(':id/block')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
-  @RequireAuthRoles(
-    'SUPERADMIN',
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuthRoles('SUPERADMIN')
   async block(
     @Param(
       'id',
@@ -253,30 +172,22 @@ export class AdminAdminsController {
     dto: BlockAccountDto,
 
     @CurrentUser()
-    superadmin:
-      AuthPrincipal,
+    superadmin: AuthPrincipal,
 
     @Req()
-    request:
-      Request,
+    request: Request,
   ): Promise<void> {
     await this.admins.block(
       id,
       superadmin,
       dto.reason,
-      getSessionMetadata(
-        request,
-      ),
+      getSessionMetadata(request),
     );
   }
 
   @Patch(':id/unblock')
-  @HttpCode(
-    HttpStatus.NO_CONTENT,
-  )
-  @RequireAuthRoles(
-    'SUPERADMIN',
-  )
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAuthRoles('SUPERADMIN')
   async unblock(
     @Param(
       'id',
@@ -287,20 +198,12 @@ export class AdminAdminsController {
     id: string,
 
     @CurrentUser()
-    superadmin:
-      AuthPrincipal,
+    superadmin: AuthPrincipal,
 
     @Req()
-    request:
-      Request,
+    request: Request,
   ): Promise<void> {
-    await this.admins.unblock(
-      id,
-      superadmin,
-      getSessionMetadata(
-        request,
-      ),
-    );
+    await this.admins.unblock(id, superadmin, getSessionMetadata(request));
   }
 
   @Get(':id')
@@ -313,8 +216,6 @@ export class AdminAdminsController {
     )
     id: string,
   ) {
-    return this.admins.get(
-      id,
-    );
+    return this.admins.get(id);
   }
 }
