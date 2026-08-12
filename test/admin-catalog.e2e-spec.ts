@@ -183,6 +183,7 @@ describe('Poromosiyo admin catalog (e2e)', () => {
         description: 'This product must not be accepted.',
         originalPrice: '10000.00',
         sellingPrice: '10000.00',
+        expiresAt: futureExpiration(),
       })
       .expect(400);
   });
@@ -202,6 +203,7 @@ describe('Poromosiyo admin catalog (e2e)', () => {
         sellingPrice: '7500.00',
         currency: 'RWF',
         isFeatured: true,
+        expiresAt: futureExpiration(),
       })
       .expect(201);
 
@@ -384,6 +386,10 @@ function parseAuth(text: string): AuthenticationResult {
   }
 
   return value as AuthenticationResult;
+}
+
+function futureExpiration(): string {
+  return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 function parseId(text: string): string {
